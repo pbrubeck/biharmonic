@@ -27,7 +27,7 @@ dir=(2*(angle(dw(:,2)./dw(:,1))>0)-1).*dir;
 b=(dir==0);
 dir(b)=-1i*dw(b,2);
 dir=-dir./abs(dir);
-dir=dir*min(max(real(w))-min(real(w)),max(imag(w))-min(imag(w)));
+dir=dir*min(max(real(w))-min(real(w)),max(imag(w))-min(imag(w)))/sqrt(1);
 
 pol=[];z=[];un=[];id=[];mass=[];
 for i=1:m

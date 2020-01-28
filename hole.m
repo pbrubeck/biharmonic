@@ -3,20 +3,29 @@ ifprint=false;
 ifslow=true;
 
 nc=10;
-nplt=15*16;
+nplt=16*8;
 
 L1=1; H1=1;
-L2=2/15; H2=L2;
-hol=-1/3;
+L2=1/8; H2=L2;
+hol=-1/2+1i/2;
+%hol=0;
+
+a1=0; b1=0; c1=(sqrt(2)*L2)^2;
+fex=@(z) (a1+b1*abs(z-hol).^2).*log(abs(z-hol))+1*imag(z-hol+c1./(z-hol));
+uex=@(z) 2i./(z-hol).*(a1+b1*abs(z-hol).^2.*(1+2*log(abs(z-hol))))+1*(1-c1./(z-hol).^2);
+
 
 w1=[L1+1i*H1; 1i*H1; -L1+1i*H1]; w1=[L1; w1; -L1; conj(w1(end:-1:1))];
 w1=[L1+1i*H1; -L1+1i*H1]; w1=[w1; conj(w1(end:-1:1))];
 
 w2=[L2+1i*H2; -L2+1i*H2; -L2-1i*H2; L2-1i*H2];
 
-w3=w2-conj(hol);
-w2=w2+hol;
-
+if(hol==0)
+    w3=[];
+else
+    w3=w2-conj(hol);
+    w2=w2+hol;
+end
 
 a0=exp(1i*0.5); a0=1;
 x1=min(real(w1)); x2=max(real(w1));
@@ -25,8 +34,16 @@ w1=a0*w1; w2=a0*w2; w3=a0*w3;
 
 
 i1=1:length(w1);
-i2=i1(end)+(1:length(w2));
-i3=i2(end)+(1:length(w2));
+if(isempty(w2))
+    i2=[];
+else
+    i2=i1(end)+(1:length(w2));
+end
+if(isempty(w3))
+    i3=[];
+else
+    i3=i2(end)+(1:length(w3));
+end
 w=[w1(:); w2(:); w3(:)];
 
 kmin=1; 
@@ -37,25 +54,37 @@ npol=repmat(kmin,size(w));
 tic;
 %kmin=kmax; npol(:)=kmin; npol(abs(w)<1)=10;
 
-
-hol=mean(w(i2)); %hol=[];
+if(isempty(i3))
+    hol=mean(w(i2));
+else
+    hol=[mean(w(i2)), mean(w(i3))];
+end
 % w(i1)=[]; i1=[];
 for k=kmin:kmax
     if(ifslow), npol(:)=k; end
     n=numel(w)*k;
-    
+    n=2;
+   
     %disp(npol');
     [pol1,z1,un1,id1,wq1] = adapt_poles(npol(i1).^2,w(i1));
-
+    if(isempty(i2))
+    [pol2,z2,un2,id2,wq2] = deal([]);
+    else
     [pol2,z2,un2,id2,wq2] = adapt_poles(npol(i2).^2,w(i2(end:-1:1)));
+    end
+    if(isempty(i3))
+    [pol3,z3,un3,id3,wq3] = deal([]);
+    else
     [pol3,z3,un3,id3,wq3] = adapt_poles(npol(i3).^2,w(i3(end:-1:1)));
+    end
     
     pol=[pol1;pol2;pol3]; zs=[z1;z2;z3]; un=[un1;un2;un3]; 
     id=[id1;id2+numel(i1);id3+numel(i1)+numel(i2)]; mass=[wq1;wq2;wq3];
-
+       
+    
     xs=real(zs/a0);
     ys=imag(zs/a0);
-    bctype=ones(size(zs));
+    bctype=zeros(size(zs));
     bcdata=zeros(size(zs));
     
     tol=1E-15;
@@ -66,16 +95,14 @@ for k=kmin:kmax
     wall=top|bot|left|right;
     hole=~wall;
     
-    bctype(hole)=0;
+    bctype(hole)=1;
     bctype(wall)=0;
+    bcdata(top)=1;    
     
-    %bcdata(top)=1;
-    
-    bcdata(hole)=1i*sign(xs(hole));
-    
-    [goursat,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
+    %mass(:)=1;
+    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
     res(k)=norm(r);
-    rtot=res(k)^2;
+    rtot=res(k)^2;   
 
     ri=sparse([id;id],ones(size(r)),r.^2,numel(w)+1,1);
     kk=(ri>rtot*0.5);
@@ -96,31 +123,38 @@ y=linspace(y1,y2,ny);
 zz=xx+1i*yy;
 
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w(i1)),imag(w(i1))); ib1=(inp|onp);
+if(isempty(i2))
+ib2=false(size(ib1));
+else
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w(i2)),imag(w(i2))); ib2=(inp&~onp);
+end
+if(isempty(i3))
+ib3=false(size(ib1));
+else
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w(i3)),imag(w(i2))); ib3=(inp&~onp);
-
+end
 ib=ib1&~ib2&~ib3;
 psi=(1+1i)*nan(size(zz)); uu=psi; pp=psi;
-[psi(ib),uu(ib),pp(ib)]=goursat(zz(ib));
+[psi(ib),uu(ib),pp(ib)]=ufun(zz(ib));
 
-uu=uu.*min(1./abs(uu),1);
-pp=pp.*min(10./abs(pp),1);
+%psi=psi-fex(zz); uu=uu-conj(uex(zz));
+%uu=uu.*min(1./abs(uu),1);
 
 %zz(~ib)=nan; psi=imag(zz+L2.^2./zz); uu=(1-L2.^2./zz.^2);
 %uu=uu-uex(zz); psi=psi-psiex(zz);
 
-lw='Linewidth'; ms='markersize'; ctol=1E-8;
+lw='Linewidth'; ms='markersize'; ctol=0E-8;
 cs=[linspace(min(real(psi(:))),ctol,nc),0,linspace(ctol,max(real(psi(:))),nc)];
-cs=linspace(-2/3,2/3,2*nc+1);
+%cs=linspace(-2/3,2/3,2*nc+1);
+
 
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),numel(cs),'k',lw,1);
 %contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1);
 
-plot(w(i2([1:end,1])),'-k',lw,1); 
-plot(w(i3([1:end,1])),'-k',lw,1); 
-
+if(~isempty(i2)), plot(w(i2([1:end,1])),'-k',lw,1); end
+if(~isempty(i3)), plot(w(i3([1:end,1])),'-k',lw,1); end
 
 %au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 
@@ -153,14 +187,18 @@ plot(w(i1([1:end,1])),'-k'); hold on;
 if(~isempty(i2)), plot(w(i2([1:end,1])),'-k'); end
 if(~isempty(i3)), plot(w(i3([1:end,1])),'-k'); end
 plot(real(hol),imag(hol),'ob');
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
+quiver(real(zs),imag(zs),real(un),imag(un),'b');
+hold off; axis equal;
+if(ifprint), print('-depsc','ldc_conv'); end
 
 figure(4);
 for k=1:max(id)
     plot(r(id==k)); hold on;
 end
 hold off; legend(num2str((1:max(id))'));
+
+x=linspace(-1,1,nplt); x(abs(x)<L2)=nan;
+[fx,ux,px]=ufun(x);
+figure(23); plot(x,real(fx),'k',x,imag(ux),'r',x,real(ux),'b');
 end

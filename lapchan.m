@@ -3,7 +3,7 @@ ifprint=false;
 ifslow=true;
 
 nc=10;
-nplt=32;
+nplt=16;
 if(nargin<2),iprob=1;end
 
 L1=2; H1=1;
@@ -22,10 +22,11 @@ uw=uw-real(uw)/2;
 ut=sign(real(uw));
 
 
+s1=1/4;
 ftop=@(z) 0*z;utop=@(z) 0*z;
 if(iprob==1)
-    ftop=@(z) -1i*(((z+1i)/2).*(1+tanh(z))/2  + z.*(1-tanh(z))/2 );
-    utop=@(z)   2*(((z+1i)/2).*(sech(z).^2)/2 + z.*(-sech(z).^2)/2 + (1+tanh(z))/4+ (1-tanh(z))/2);
+    ftop=@(z) -1i*(((z+1i)/2).*(1+tanh(s1*z))/2  + z.*(1-tanh(s1*z))/2 );
+    utop=@(z)   2*(((z+1i)/2).*(s1*sech(s1*z).^2)/2 + z.*(-s1*sech(s1*z).^2)/2 + (1+tanh(s1*z))/4+ (1-tanh(s1*z))/2);
 end
 ftop=@(z) 0*z;utop=@(z) 0*z;
 
@@ -38,21 +39,24 @@ tic;
 %kmin=kmax; npol(:)=kmin; npol(abs(w)<1)=10;
 for k=kmin:kmax
     if(ifslow), npol(:)=k; end
-    n=k; %n=0;
+    n=2*k; %n=0;
 
     %disp(npol');
     [pol1,z1,un1,id1,wq1]=adapt_poles(npol.^2,w);
-     
-    nub=3*k;
-    tt=(2/nub)*(1:nub-1)-1;
-    tt=((1+tt)./(1-tt));
-    z2=repmat(uw,1,length(tt))+ut*tt;
+    sigma=log(4);
+    beta=L1;
+    
+    nub=k*k;
+    h=1/3;
+    kk=h:h:nub;
+    tt=beta*exp(sigma*(sqrt(nub)-sqrt(kk)));
+    z2=repmat(uw,1,length(tt))+ut*(tt-tt(end));
     un2=1i*(2*(imag(uw)>0)-1).*ut;
     id2=repmat(numel(w)-numel(uw)+(1:numel(uw))',1,length(tt));
     wq2=ones(size(z2));
     
-    sigma=log(2);
-    pol2=1i*H1*(1+exp(sigma*(sqrt(1:k^2)-1))/k);
+    beta=beta;
+    pol2=1i*(H1+beta*exp(sigma*(k-sqrt(1:k^2))));
     pol2=[pol2;-pol2];
     
     bin=abs(real(z1))<=L1/2;
@@ -96,7 +100,7 @@ end
 toc
 
 
-w=w+2*real(w);
+w=w+99*real(w);
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
 y1=min(imag(w)); y2=max(imag(w)); dy=y2-y1;
@@ -136,7 +140,7 @@ figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 surf(real(zz),imag(zz),real(psi)); hold on;
 hold off; grid off;
 xlim([x1,x2]); ylim([y1,y2]);
-daspect([1,1,1]); %zlim([-2/3,2/3]);
+%daspect([1,1,1]); %zlim([-2/3,2/3]);
 
 colormap(jet(256)); %shading interp;
 cb=colorbar(); cb.TickLabelInterpreter='latex';

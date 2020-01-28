@@ -1,12 +1,12 @@
-function [res]=chan(kmax,iprob)
+function [res]=chan(nstep,iprob)
 ifprint=false;
 ifslow=false;
 
-nc=20;
+nc=10;
 nplt=64;
 if(nargin<2),iprob=1;end
 
-L1=1; H1=1;
+L1=4; H1=1;
 
 % Corners of finite domain
 w=[L1+1i*H1; 1i*H1; -L1+1i*H1; -L1-1i*H1; -1i*H1; L1-1i*H1]; 
@@ -25,35 +25,38 @@ ut=sign(real(uw));
 ftop=@(z) 0*z;utop=@(z) 0*z;
 if(iprob==1)
     ftop=@(z) -1i*(((z+1i)/2).*(1+tanh(z))/2  + z.*(1-tanh(z))/2 );
-    utop=@(z)   2*(((z+1i)/2).*(sech(z).^2)/2 + z.*(-sech(z).^2)/2 + (1+tanh(z))/4+ (1-tanh(z))/2);
+    utop=@(z)   1*(((z+1i)/2).*(sech(z).^2)/2 + z.*(-sech(z).^2)/2 + (1+tanh(z))/4+ (1-tanh(z))/2);
 end
 ftop=@(z) 0*z;utop=@(z) 0*z;
 
 kmin=1; 
-res=zeros(kmax,1);
-dofs=zeros(kmax,1);
+res=zeros(nstep,1);
+dofs=zeros(nstep,1);
 npol=repmat(kmin,size(w));
 
 tic;
 %kmin=kmax; npol(:)=kmin; npol(w==0)=10;
-for k=kmin:kmax
+for k=kmin:nstep
     if(ifslow), npol(:)=k; end
-    n=k+2;
+    n=2*k+1; 
+    %n=3*k;
 
     %disp(npol');
     [pol1,z1,un1,id1,wq1]=adapt_poles(npol.^2,w);
-     
-    nub=3*k;
-    tt=(2/nub)*(1:nub-1)-1;
-    tt=((1+tt)./(1-tt));
-    z2=repmat(uw,1,length(tt))+ut*tt;
+    
+    sigma=log(4);
+    beta=H1/2;
+    
+    nub=k*k;
+    h=1/3;
+    kk=h:h:nub;
+    tt=beta*exp(sigma*(sqrt(nub)-sqrt(kk)));
+    z2=repmat(uw,1,length(tt))+ut*(tt-tt(end));
     un2=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
     id2=repmat(numel(w)-numel(uw)+(1:numel(uw))',1,length(tt));
     wq2=ones(size(z2));
-    
-    sigma=log(2);
-    beta=k/3;
-    pol2=1i*H1*(1+exp(sigma*(sqrt(1:k^2)-1))/beta);
+
+    pol2=1i*(H1+beta*exp(sigma*(k-sqrt(1:k^2))));
     pol2=[pol2;-pol2];
     
     bin=abs(real(z1))<=L1/2;
@@ -85,6 +88,8 @@ for k=kmin:kmax
     end
     bcdata(bot)=0;
     
+    bcdata=bcdata-(imag(un.*utop(zs))-1i*imag(ftop(zs)));
+    
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
     rtot=res(k)^2;
@@ -97,7 +102,7 @@ end
 toc
 
 
-w=w+2*real(w);
+w=w+real(w);
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
 y1=min(imag(w)); y2=max(imag(w)); dy=y2-y1;
@@ -113,6 +118,8 @@ zz=xx+1i*yy;
 
 psi=(1+1i)*nan(size(zz)); uu=psi; pp=psi;
 [psi(ib),uu(ib),pp(ib)]=ufun(zz(ib));
+psi=psi+ftop(zz);
+uu=uu+conj(utop(zz));
 
 lw='Linewidth'; ms='markersize'; ctol=0;
 cs=[linspace(min(real(psi(:))),ctol,5),0,linspace(ctol,max(real(psi(:))),nc)];
@@ -125,7 +132,8 @@ contour(real(zz),imag(zz),real(psi),cs,'k',lw,1); hold on;
 %au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 hold off; grid off;
 colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
-xlim([x1,x2]); ylim([y1,y2]); axis equal; 
+xlim([x1,x2]); ylim([y1,y2]); 
+%axis equal; 
 cb=colorbar(); cb.TickLabelInterpreter='latex';
 
 subplot(2,1,2); c=0.45;
@@ -136,6 +144,7 @@ cc=[linspace(min(real(psi(:))),ctol,5),0,linspace(ctol,max(real(psi(:))),5)];
 pcolor(real(zc),imag(zc),log(abs(uc))/log(10)); hold on;
 contour(real(zc),imag(zc),real(fc),cc,'k',lw,1); hold off;
 axis equal;
+
 colormap(jet(256)); shading interp; alpha(0.8); caxis(log([tol,max(abs(uc(:)))])/log(10));
 cb=colorbar(); cb.TickLabelInterpreter='latex'; 
 if(ifprint),print('-depsc','bstep_soln'); end
@@ -170,7 +179,8 @@ xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
 
 subplot(1,2,2); 
 plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; 
+%axis equal;
 xlim([x1,x2]); ylim(3*[y1,y2]);
 if(ifprint)
     print('-depsc','ldc_conv');

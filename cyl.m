@@ -71,15 +71,15 @@ for k=kmin:kmax
     wall=top|bot|left|right;
     hole=~wall;
     
-    bctype(hole)=4;
+    bctype(hole)=0;
     bctype(wall)=1;
 
     bcdata(wall)=uex(zs(wall));  
 
     
     bctype(wall)=1; bcdata(wall)=1; bcdata(wall)=1-abs(ys(wall)).^2;
-    bctype(right)=2; bcdata(right)=0;
-    bctype(top|bot)=4; bcdata(top|bot)=0;
+    %bctype(right)=2; bcdata(right)=0;
+    %bctype(top|bot)=4; bcdata(top|bot)=0;
     
     [goursat,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol);
     res(k)=norm(r);
@@ -129,7 +129,7 @@ cs=linspace(-2/3,2/3,2*nc+1);
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),numel(cs),'k',lw,1); hold on;
-contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1); hold on;
+%contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1); hold on;
 if(isempty(i1))
     plot(L2*exp(2i*pi*(0:64)/64),'-k',lw,1); 
 else
@@ -138,7 +138,7 @@ end
 %au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 
 hold off; grid off;
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,max(abs(uu(ib)))]);
+colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
 xlim([x1,x2]); ylim([y1,y2]); axis equal; 
 
 cb=colorbar(); cb.TickLabelInterpreter='latex';

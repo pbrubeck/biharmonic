@@ -1,5 +1,5 @@
 function [res]=ldc(kmax)
-ifprint=false;
+ifprint=true;
 ifslow=false;
 
 w=[1+1i;-1+1i;-1-1i;1-1i];
@@ -28,6 +28,7 @@ for k=kmin:kmax
     if(k>1), n=n+2*k; end
 
     if(ifslow), npol(:)=k; end
+    %disp(npol.')
     [pol,zs,un,id,mass]=adapt_poles(npol.^2,w);
     
     bctype=zeros(size(zs));
@@ -38,54 +39,59 @@ for k=kmin:kmax
     bctype(top|bot)=1;
     bcdata(top)=v1;
     bcdata(bot)=v2;
-    [goursat,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
+    
+    %mass(:)=1;
+    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
     
-    rtot=res(k)^2;
     ri=full(sparse([id;id],ones(size(r)),r.^2,numel(w),1));
-    kk=(ri>rtot*0.5);
-    npol(kk)=npol(kk)+ceil(1+sqrt(npol(kk)));
+    kk=adapt_hist(ri);
+    npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
 end
-toc
+tsol=toc;
 
 % Plotting
 nplt=128;
 xx=linspace(min(real(w)),max(real(w)),nplt);
 yy=linspace(min(imag(w)),max(imag(w)),nplt);
 [xx,yy]=ndgrid(xx,yy); zz=xx+1i*yy;
-[psi,uu]=goursat(zz);
+
+tic;
+[psi,uu]=ufun(zz);
+tval=toc*1E3/numel(zz);
 uu([1,end],[1,end])=0;
 
 nc=3;
 zc=(-1-A*1i)+0.05*(1+A*1i)*(1:nc)/nc;
-cs=[cs,real(goursat(zc))];
+cs=[cs,real(ufun(zc))];
 %cs=[-cs,linspace(min(max(0,psi(:))),max(max(0,psi(:))),5)];
 
 
-lw='Linewidth'; ms='markersize';
+lw='Linewidth'; ms='markersize'; fs='fontsize';
 
-figure(1); clf;
-set(gcf,'Renderer', 'Painters');
+figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 pcolor(real(zz),imag(zz),abs(uu)); hold on;  
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
-contour(real(zz),imag(zz),real(psi),cs,'k',lw,1); 
-hold off;
-axis equal; grid off;
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-if(ifprint)
-    print('-depsc','ldc_soln');
-    %export_fig('ldc_soln','-eps','-transparent');
-end
+colormap(jet(256)); shading interp; caxis([0,1]); %alpha(0.8); 
+contour(real(zz),imag(zz),real(psi),cs(cs>=0),'y',lw,1.5);
+contour(real(zz),imag(zz),real(psi),cs(cs<=0),'k',lw,1.5); 
+plot(w([1:end,1]),'k',lw,1.6);
+hold off; grid off; axis equal; axis off; axis tight;
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
+if(ifprint), print('-depsc','ldc_soln'); end
 
-figure(2); clf;
-subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,1,ms,20);
-grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-
+figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
+hold off; axis equal; axis square;
+
+subplot(1,2,1);
+subplot(1,1,1); 
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); 
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(2,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
+text(2,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
+if(ifprint), print('-depsc','ldc_conv'); end
 end

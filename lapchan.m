@@ -1,12 +1,12 @@
 function [res]=lapchan(kmax,iprob)
-ifprint=false;
-ifslow=true;
+ifprint=true;
+ifslow=false;
 
 nc=10;
 nplt=16;
 if(nargin<2),iprob=1;end
 
-L1=2; H1=1;
+L1=5; H1=1;
 
 % Corners of finite domain
 w=[L1+1i*H1; 1i*H1; -L1+1i*H1; -L1-1i*H1; -1i*H1; L1-1i*H1]; 
@@ -39,25 +39,25 @@ tic;
 %kmin=kmax; npol(:)=kmin; npol(abs(w)<1)=10;
 for k=kmin:kmax
     if(ifslow), npol(:)=k; end
-    n=2*k; %n=0;
+    n=4*k;
 
-    %disp(npol');
+    disp(npol');
     [pol1,z1,un1,id1,wq1]=adapt_poles(npol.^2,w);
     sigma=log(4);
-    beta=L1;
+    beta=H1;
     
     nub=k*k;
     h=1/3;
-    kk=h:h:nub;
+    kk=h/2:h:nub;
     tt=beta*exp(sigma*(sqrt(nub)-sqrt(kk)));
     z2=repmat(uw,1,length(tt))+ut*(tt-tt(end));
-    un2=1i*(2*(imag(uw)>0)-1).*ut;
+    un2=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
     id2=repmat(numel(w)-numel(uw)+(1:numel(uw))',1,length(tt));
     wq2=ones(size(z2));
     
-    beta=beta;
     pol2=1i*(H1+beta*exp(sigma*(k-sqrt(1:k^2))));
     pol2=[pol2;-pol2];
+    
     
     bin=abs(real(z1))<=L1/2;
     zs=[z1(bin);z2(:)];
@@ -97,10 +97,9 @@ for k=kmin:kmax
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
 end
-toc
+tsol=toc;
 
-
-w=w+99*real(w);
+w=w+real(w);
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
 y1=min(imag(w)); y2=max(imag(w)); dy=y2-y1;
@@ -115,51 +114,52 @@ zz=xx+1i*yy;
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w),imag(w)); ib=(inp|onp);
 
 psi=(1+1i)*nan(size(zz)); uu=psi;
+tic;
 [psi(ib),uu(ib)]=ufun(zz(ib));
+tval=toc*1E3/nnz(ib);
 psi(ib)=psi(ib)+ftop(zz(ib));
 uu(ib)=conj(2i*uu(ib)+utop(zz(ib)));
 
-lw='Linewidth'; ms='markersize'; ctol=0;
+lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
+ctol=0;
 cs=[linspace(min(real(psi(:))),ctol,nc),0,linspace(ctol,max(real(psi(:))),nc)];
 
 
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),nc,'k',lw,1); hold on;
-contour(real(zz),imag(zz),imag(psi),nc,'k',lw,1); hold on;
+pcolor(real(zz),imag(zz),real(psi)); hold on;
+%contour(real(zz),imag(zz),real(psi),nc,'k',lw,1); hold on;
+%contour(real(zz),imag(zz),imag(psi),nc,'k',lw,1); hold on;
 %au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 
-hold off; grid off;
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
+hold off; grid off; axis off;
+colormap(jet(256)); shading interp; caxis([0,1]); %alpha(0.8); 
 xlim([x1,x2]); ylim([y1,y2]); axis equal; 
-
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-if(ifprint),print('-depsc','cyl_soln'); end
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
+if(ifprint),print('-depsc','lapchan_soln'); end
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 surf(real(zz),imag(zz),real(psi)); hold on;
-hold off; grid off;
+hold off; grid off; shading interp;
 xlim([x1,x2]); ylim([y1,y2]);
 %daspect([1,1,1]); %zlim([-2/3,2/3]);
 
 colormap(jet(256)); %shading interp;
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-title('Stream function');
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
 
-if(ifprint), print('-depsc','cyl_pres'); end
+%if(ifprint), print('-depsc','lapchan_pres'); end
 
 figure(3); clf;
-subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,1,ms,20);
-grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-
 subplot(1,2,2); 
 plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
-xlim([x1,x2]); ylim(3*[y1,y2]);
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
+hold off; axis equal; xlim([x1,x2]); 
+
+subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
+if(ifprint), print('-depsc','lapchan_conv'); end
 
 figure(4);
 for k=1:max(id)

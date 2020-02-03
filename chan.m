@@ -1,12 +1,12 @@
 function [res]=chan(nstep,iprob)
-ifprint=false;
+ifprint=true;
 ifslow=false;
 
 nc=10;
 nplt=64;
 if(nargin<2),iprob=1;end
 
-L1=4; H1=1;
+L1=5; H1=1;
 
 % Corners of finite domain
 w=[L1+1i*H1; 1i*H1; -L1+1i*H1; -L1-1i*H1; -1i*H1; L1-1i*H1]; 
@@ -37,28 +37,27 @@ npol=repmat(kmin,size(w));
 tic;
 %kmin=kmax; npol(:)=kmin; npol(w==0)=10;
 for k=kmin:nstep
-    if(ifslow), npol(:)=k; end
-    n=2*k+1; 
-    %n=3*k;
+    if(ifslow), npol(:)=k; end 
+    n=4*k;
 
-    %disp(npol');
+    disp(npol');
     [pol1,z1,un1,id1,wq1]=adapt_poles(npol.^2,w);
-    
     sigma=log(4);
-    beta=H1/2;
+    beta=H1/1.5;
+    
     
     nub=k*k;
     h=1/3;
     kk=h:h:nub;
     tt=beta*exp(sigma*(sqrt(nub)-sqrt(kk)));
-    z2=repmat(uw,1,length(tt))+ut*(tt-tt(end));
+    z2=repmat(uw,1,length(tt))+ut*(tt-beta);
     un2=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
     id2=repmat(numel(w)-numel(uw)+(1:numel(uw))',1,length(tt));
     wq2=ones(size(z2));
-
+    
     pol2=1i*(H1+beta*exp(sigma*(k-sqrt(1:k^2))));
     pol2=[pol2;-pol2];
-    
+
     bin=abs(real(z1))<=L1/2;
     zs=[z1(bin);z2(:)];
     un=[un1(bin);un2(:)];
@@ -88,18 +87,15 @@ for k=kmin:nstep
     end
     bcdata(bot)=0;
     
-    bcdata=bcdata-(imag(un.*utop(zs))-1i*imag(ftop(zs)));
-    
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
-    rtot=res(k)^2;
-
     ri=full(sparse([id;id],ones(size(r)),r.^2,max(id),1));
-    kk=(ri>rtot*0.5);
+    kk=adapt_hist(ri);    
+    
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
 end
-toc
+tsol=toc;
 
 
 w=w+real(w);
@@ -117,78 +113,62 @@ zz=xx+1i*yy;
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w),imag(w)); ib=(inp|onp);
 
 psi=(1+1i)*nan(size(zz)); uu=psi; pp=psi;
+tic;
 [psi(ib),uu(ib),pp(ib)]=ufun(zz(ib));
+tval=toc*1E3/nnz(ib);
 psi=psi+ftop(zz);
+pp(zz==0)=nan;
 uu=uu+conj(utop(zz));
 
-lw='Linewidth'; ms='markersize'; ctol=0;
-cs=[linspace(min(real(psi(:))),ctol,5),0,linspace(ctol,max(real(psi(:))),nc)];
 
+lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
+cs=[linspace(min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-subplot(2,1,1);
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),cs,'k',lw,1); hold on;
-%contour(real(zz),imag(zz),imag(psi),nc,'k',lw,1); hold on;
-%au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
-hold off; grid off;
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
-xlim([x1,x2]); ylim([y1,y2]); 
-%axis equal; 
-cb=colorbar(); cb.TickLabelInterpreter='latex';
+contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2);
+contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2);
+plot(w([1:end,1]),'-k',lw,2);
+%contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1);
+% au=abs(uu);
+% quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 
-subplot(2,1,2); c=0.45;
-[xc,yc]=ndgrid(linspace(0,H1*c,2*nplt));zc=xc+1i*(yc-1);
-[fc,uc,pc]=ufun(zc);
-cc=[linspace(min(real(psi(:))),ctol,5),0,linspace(ctol,max(real(psi(:))),5)];
+hold off; grid off; axis off;
+colormap(jet(256)); shading interp; caxis([0,1]);
+xlim([-L1,L1]); ylim([-H1,H1]); axis equal; 
 
-pcolor(real(zc),imag(zc),log(abs(uc))/log(10)); hold on;
-contour(real(zc),imag(zc),real(fc),cc,'k',lw,1); hold off;
-axis equal;
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
+if(ifprint), print('-depsc','chan_soln'); end
 
-colormap(jet(256)); shading interp; alpha(0.8); caxis(log([tol,max(abs(uc(:)))])/log(10));
-cb=colorbar(); cb.TickLabelInterpreter='latex'; 
-if(ifprint),print('-depsc','bstep_soln'); end
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+surf(real(zz),imag(zz),real(pp)); hold on;
+hold off; grid off; axis off;
+xlim([-L1,L1]); ylim([-H1,H1]); 
 
-subplot(2,1,1);
-surf(real(zz),imag(zz),real(psi)); grid off; view(2);
-xlim([x1,x2]); ylim([y1,y2]);
-daspect([1,1,1]); %zlim([-2/3,2/3]);
-colormap(jet(256)); %shading interp;
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-title('Stream function');
-
-subplot(2,1,2);
-surf(real(zz),imag(zz),real(pp)); grid off; view(2);
-xlim([x1,x2]); ylim([y1,y2]);
-daspect([1,1,1]); %zlim([-2/3,2/3]);
-zref=[-3*L1+1i*H1/2, 3*L1];
-[psiref,uref,pref]=ufun(zref);
-daspect([1,1,abs(diff(real(pref)))]); caxis(sort(real(pref))); zlim(sort(real(pref)));
 colormap(jet(256)); %shading interp;
 cb=colorbar(); cb.TickLabelInterpreter='latex';
 title('Pressure');
+%if(ifprint), print('-depsc','chan_pres'); end
 
-if(ifprint), print('-depsc','bstep_pres'); end
+figure(3); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10);
+hold off; axis equal; xlim([x1,x2]); 
 
-figure(3); clf;
-subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,1,ms,20);
-grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+subplot(1,2,1); 
+%if(ifprint), subplot(1,1,1); end
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
 xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
+if(ifprint), print('-depsc','chan_conv'); end
 
-subplot(1,2,2); 
-plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; 
-%axis equal;
-xlim([x1,x2]); ylim(3*[y1,y2]);
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
-
+return
 figure(4);
-for k=1:max(id)
+for k=1:numel(w)
     plot(r(id==k)); hold on;
 end
-hold off; legend(num2str((1:max(id))'));
+hold off; legend(num2str((1:numel(w))'));
 end

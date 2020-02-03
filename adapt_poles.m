@@ -27,7 +27,19 @@ dir=(2*(angle(dw(:,2)./dw(:,1))>0)-1).*dir;
 b=(dir==0);
 dir(b)=-1i*dw(b,2);
 dir=-dir./abs(dir);
-dir=dir*min(max(real(w))-min(real(w)),max(imag(w))-min(imag(w)))/sqrt(1);
+
+if(sum(angle(dw(:,1)./dw(:,2)))>0)
+    [dmax,kmax]=max(abs(dw(:,1)));
+    ww=(dw(kmax,1)/dmax)*w;
+    wr=sort(real(ww)); wr=wr([1 end]);
+    wi=sort(imag(ww)); wi=wi([1 end]);
+    scl=max([diff(wr),diff(wi)])*sqrt(2);
+else
+    dst=abs((repmat(w(:),1,m)-repmat(w(:).',m,1)));
+    scl=min(dst+max(dst(:))*eye(m),[],2);
+    scl=scl/sqrt(2);
+end
+dir=dir.*scl;
 
 pol=[];z=[];un=[];id=[];mass=[];
 for i=1:m
@@ -38,19 +50,10 @@ for i=1:m
     poli=w(i)+dir(i)*beta;
 
     % Sample points at the boundary
-    zq=0.5*exp(-sigma*(sqrt(n)-sqrt(h:h:n)'));
-    wq=0.5*h*sigma*zq./sqrt(h:h:n)';
+    sj=sqrt(h/2:h:n)';
+    zq=0.5*exp(-sigma*(sqrt(n)-sj));
+    wq=0.5*h*sigma*zq./sj;
     wq(end)=wq(end)/2;
-
-    
-    nn=p*n;
-    j=(0:nn)'+1/2;
-    dt=sqrt(1/nn)/2;
-    t=dt*j;
-    s=(pi/2)*sinh(t);
-    %zq=(1-tanh(s))/2;
-    %wq=(dt*pi/4)*cosh(t)./cosh(s).^2;
-
 
     kd=abs(zq)>1E-15;
     zq=zq(kd);

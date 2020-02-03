@@ -1,8 +1,9 @@
 function [res]=bstep(kmax)
-ifprint=false;
+ifprint=true;
 ifslow=false;
 
-nplt=64;
+nc=10;
+nplt=128;
 L1=1; L2=5; 
 H1=1; H2=1;
 %w=[L2+1i*H2; -L1+1i*H2; -L1-1i*H1; L2-1i*H1];
@@ -51,19 +52,18 @@ for k=kmin:kmax
         bcdata(right)= 2*bcdata(right)*a0;
     end
 
-    [goursat,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
+    mass(:)=1;
+    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
     rtot=res(k)^2;
-    
-    
+
     ri=full(sparse([id;id],ones(size(r)),r.^2,numel(w),1));
-    kk=(ri>rtot*0.5);
+    kk=adapt_hist(ri);
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
-    
     %full(sparse(id,ones(size(mass)),mass,max(id),1))
 end
-toc
+tsol=toc;
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -77,72 +77,63 @@ y=linspace(y1,y2,ny);
 zz=xx+1i*yy;
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w),imag(w)); ib=(inp|onp);
 psi=nan(size(zz)); uu=nan(size(zz)); pp=nan(size(zz));
-[psi(ib),uu(ib),pp(ib)]=goursat(zz(ib));
+tic;
+[psi(ib),uu(ib),pp(ib)]=ufun(zz(ib));
+tval=toc*1E3/nnz(ib);
+pp(zz==0)=-5;
 
 
-lw='Linewidth'; ms='markersize'; ctol=0;
-cs=[linspace(min(real(psi(:))),ctol,4),linspace(ctol,max(real(psi(:))),20)];
-
-
+lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
+cs=[linspace(min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-plot(w([1:end,1]),'-k',lw,1);
-contour(real(zz),imag(zz),real(psi),cs,'k',lw,1);
+contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2);
+contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2);
+plot(w([1:end,1]),'-k',lw,2);
 %contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1);
 % au=abs(uu(:,:,j));
 % quiver(real(zz(:,:,j)),imag(zz(:,:,j)),real(uu(:,:,j))./au,imag(uu(:,:,j))./au,'k');
 
-hold off; grid off;
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
+hold off; grid off; axis off;
+colormap(jet(256)); shading interp; caxis([0,1]);
 xlim([-L1,L2]); ylim([-H1,H2]); axis equal; 
 
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-if(ifprint)
-    print('-depsc','ldc_soln');
-    %export_fig('ldc_soln','-eps','-transparent');
-end
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
+if(ifprint), print('-depsc','step_soln'); end
 
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 surf(real(zz),imag(zz),real(pp)); hold on;
-hold off; grid off;
+hold off; grid off; axis off;
 xlim([-L1,L2]); ylim([-H1,H2]); 
 
 zref=[-L1+1i*H1/2, L2];
-[psiref,uref,pref]=goursat(zref);
-daspect([1,1,abs(diff(real(pref)))]); caxis(sort(real(pref))); zlim([-1/3,4/3]*real(pref(1)));
+[psiref,uref,pref]=ufun(zref);
+daspect([1,1,abs(diff(real(pref)))]); caxis(sort(real(pref))); zlim([-5,16])
 colormap(jet(256)); %shading interp;
 cb=colorbar(); cb.TickLabelInterpreter='latex';
 title('Pressure');
+%if(ifprint), print('-depsc','step_pres'); end
 
-if(ifprint)
-    print('-depsc','ldc_pres');
-    %export_fig('ldc_soln','-eps','-transparent');
-end
-
-figure(3); clf;
-subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,1,ms,20);
-grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-
+figure(3); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10);
+hold off; axis equal; axis square;
 
+
+subplot(1,2,1); 
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
+if(ifprint), print('-depsc','step_conv'); end
+
+return
 figure(4);
 for k=1:numel(w)
     plot(r(id==k)); hold on;
 end
 hold off; legend(num2str((1:numel(w))'));
-
-return
-[yq,wq]=gauleg(-H1,H2,512);
-zx=L2+1i*yq(:);
-[sx,ux,px,fx]=goursat(a0*zx);
-
-figure(5); plot(imag(zx),abs(ux+4*fx),'r');
-disp(wq*px/sum(wq))
 end

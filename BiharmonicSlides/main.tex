@@ -1,0 +1,38 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+
+\include{tex/header}
+%\usebackgroundtemplate{\includegraphics[width=\paperwidth]{NormalANLBlue}}
+
+\title[Lightning Stokes]
+{Lightning Laplace and Stokes solvers}
+
+\author[P. Brubeck]{Pablo Brubeck \inst{1} \and Nick Trefethen \inst{1}}
+\institute[Oxford]{
+	\inst{1} Mathematical Institute, University of Oxford
+}
+
+\date{NA internal seminar, February 4, 2020}
+\begin{document}
+
+\setbeamertemplate{footline}{}{
+%\usebackgroundtemplate{\includegraphics[width=\paperwidth]{TitleANLBlue}}
+\frame{\titlepage}
+}
+
+\setbeamertemplate{footline}[page number]{}
+
+% FRAME: overview
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+% ========================================
+% main slides come here
+% ========================================
+
+\input{./tex/intro.tex}
+\input{./tex/laplace.tex}
+\input{./tex/stokes.tex}
+\input{./tex/results.tex}
+\end{document}

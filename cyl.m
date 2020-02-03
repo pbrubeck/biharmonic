@@ -1,23 +1,20 @@
-function []=cyl(kmax)
-ifprint=false;
-ifslow=true;
+function [res]=cyl(kmax)
+ifprint=true;
+ifslow=false;
+iflong=true;
 
-nc=10;
+nc=5;
 nplt=3*32;
 
-L1=2;
+L1=5;
 L2=1/3; 
 %L2=exp(0.25i*pi)*sqrt(2)/6;
-%L2=(1/3)/imag(exp(1i*pi/3));
+L2=(1/3)/imag(exp(1i*pi/3));
 
-
-%w0=[L1+1i; 1i; -L1+1i]; w0=[L1; w0; -L1; conj(w0(end:-1:1))];
 w0=[L1+1i; -L1+1i]; w0=[w0; conj(w0(end:-1:1))];
-%w0=[L1+1i; 1i; -L1+1i]; w0=[w0; conj(w0(end:-1:1))];
-
-
 w1=L2*[1+1i;-1+1i;-1-1i;1-1i];
-%w1=L2*exp(1i*pi*(1:6)/3);
+w1=L2*exp(1i*pi*(1:6)/3);
+%w1=L2*[0.5;1+1i;-1+1i;-0.5;-1-1i;1-1i];
 L2=abs(L2);
 
 
@@ -46,17 +43,39 @@ hol=mean(w(i1));
 %w(i1)=[]; i1=[];
 for k=kmin:kmax
     if(ifslow), npol(:)=k; end
-    n=numel(w)*k;
-    
+
     %disp(npol');
-    [pol1,z1,un1,id1] = adapt_poles(npol(i0).^2,w(i0));
+    if(iflong)
+        n=4*k;
+        h=1/3;
+        sigma=log(4); beta=1/3;
+        nub=k*k; kk=h/2:h:nub;
+        uw=w(i0); ut=sign(real(uw));
+        tt=beta*exp(sigma*(sqrt(nub)-sqrt(kk)));
+        uw=uw-real(uw);
+        
+        z1=repmat(uw,1,length(tt))+ut*(tt-beta);
+        un1=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
+        id1=repmat((1:numel(uw))',1,length(tt));
+        wq1=ones(size(z1));
+        pol1=1i*(1+beta*exp(sigma*(k-sqrt(1:k^2))));
+        pol1=[pol1(:);-pol1(:)];
+    else
+        n=numel(w)*k;
+        [pol1,z1,un1,id1,wq1]=adapt_poles(npol(i0).^2,w(i0));
+    end
     if(isempty(i1))
         nh=ceil(n);
-        pol2=hol; z2=exp(2i*pi*(1:nh)'/nh)*L2; un2=z2./abs(z2); id2=ones(size(z2));  
+        pol2=hol; z2=exp(2i*pi*(1:nh)'/nh)*L2; un2=z2./abs(z2); id2=ones(size(z2)); 
+        wq2=id2;
     else
-        [pol2,z2,un2,id2] = adapt_poles(npol(i1).^2,w(i1(end:-1:1)));
+        [pol2,z2,un2,id2,wq2] = adapt_poles(npol(i1).^2,w(i1(end:-1:1)));
+        [inp,onp]=inpolygon(real(pol2),imag(pol2),real(w(i1)),imag(w(i1))); ib=(inp&~onp);
+        %pol2(~ib)=[];
     end
-    pol=[pol1;pol2]; zs=[z1;z2]; un=[un1;un2]; id=[id1;id2+numel(i0)];
+
+    pol=[pol1;pol2]; zs=[z1(:);z2]; un=[un1(:);un2]; id=[id1(:);id2+numel(i0)];
+    mass=[wq1(:);wq2];
 
     xs=real(zs/a0);
     ys=imag(zs/a0);
@@ -72,26 +91,22 @@ for k=kmin:kmax
     hole=~wall;
     
     bctype(hole)=0;
-    bctype(wall)=1;
-
-    bcdata(wall)=uex(zs(wall));  
-
     
+    %bcdata(wall)=uex(zs(wall));  
     bctype(wall)=1; bcdata(wall)=1; bcdata(wall)=1-abs(ys(wall)).^2;
     %bctype(right)=2; bcdata(right)=0;
-    %bctype(top|bot)=4; bcdata(top|bot)=0;
+    bctype(top|bot)=0; bcdata(top)=-2i/3; bcdata(bot)=2i/3;
     
-    [goursat,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol);
+    mass(:)=1;
+    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
     res(k)=norm(r);
-    rtot=res(k)^2;
 
     ri=full(sparse([id;id],ones(size(r)),r.^2,max(id),1));
-    kk=(ri>rtot*0.5);    
+    kk=adapt_hist(ri);    
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
-    ri
 end
-toc
+tsol=toc;
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -113,35 +128,34 @@ end
 ib=ib0&~ib1;
 %ib=logical(conv2(ib,ones(3),'same')-ib);
 
-psi=(1+1i)*nan(size(zz)); uu=psi; pp=psi;
-[psi(ib),uu(ib),pp(ib)]=goursat(zz(ib));
+psi=(1+1i)*nan(size(zz));
+uu=psi; pp=psi;
 
-uu=uu.*min(3./abs(uu),1);
-pp=pp.*min(10./abs(pp),1);
+tic;
+[psi(ib),uu(ib),pp(ib)]=ufun(zz(ib));
+tval=toc*1E3/nnz(ib);
+uu(~ib)=0;
 
-%zz(~ib)=nan; psi=imag(zz+L2.^2./zz); uu=(1-L2.^2./zz.^2);
-%uu=uu-uex(zz); psi=psi-psiex(zz);
 
-lw='Linewidth'; ms='markersize'; ctol=1E-8;
-cs=[linspace(min(real(psi(:))),ctol,nc),0,linspace(ctol,max(real(psi(:))),nc)];
-cs=linspace(-2/3,2/3,2*nc+1);
+lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
+cs=linspace(min(real(psi(:))),max(real(psi(:))),2*nc+1);
 
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),numel(cs),'k',lw,1); hold on;
+contour(real(zz),imag(zz),real(psi),numel(cs),'k',lw,1.5); hold on;
+%contour(real(zz),imag(zz),real(psi),ds,'y',lw,1); hold on;
 %contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1); hold on;
 if(isempty(i1))
-    plot(L2*exp(2i*pi*(0:64)/64),'-k',lw,1); 
+    plot(L2*exp(2i*pi*(0:64)/64),'-k',lw,1.5); 
 else
-    plot(w(i1([1:end,1])),'-k',lw,1); 
+    plot(polyshape(real(w(i1)),imag(w(i1))),fc,'w',lw,1.5); alpha(1);
 end
 %au=abs(uu); quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
 
-hold off; grid off;
-colormap(jet(256)); shading interp; alpha(0.8); caxis([0,1]);
-xlim([x1,x2]); ylim([y1,y2]); axis equal; 
-
-cb=colorbar(); cb.TickLabelInterpreter='latex';
+hold off; grid off; axis equal; axis tight; axis off;
+colormap(jet(256)); shading interp; caxis([0,max(abs(uu(:)))]);
+xlim([x1,x2]); ylim([y1,y2]); 
+%cb=colorbar(); cb.TickLabelInterpreter='latex';
 if(ifprint),print('-depsc','cyl_soln'); end
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
@@ -153,23 +167,30 @@ xlim([x1,x2]); ylim([y1,y2]);
 colormap(jet(256)); %shading interp;
 cb=colorbar(); cb.TickLabelInterpreter='latex';
 title('Stream function');
+%if(ifprint), print('-depsc','cyl_pres'); end
 
-if(ifprint), print('-depsc','cyl_pres'); end
 
+w(i0)=w(i0)+4*real(w(i0));
 figure(3); clf;
-subplot(1,2,1); semilogy(sqrt(dofs),res,'.-k',lw,1,ms,20);
-grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-
 subplot(1,2,2); 
 plot(w(i0([1:end,1])),'-k'); hold on;
 if(~isempty(i1)), plot(w(i1([1:end,1])),'-k'); end
 plot(real(hol),imag(hol),'ob');
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); hold off; axis equal;
-if(ifprint)
-    print('-depsc','ldc_conv');
-end
+plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
+hold off; axis equal; 
+xlim([-10,10]); 
 
+subplot(1,2,1); 
+%if(ifprint), subplot(1,1,1); end
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual');
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
+if(ifprint), print('-depsc','cyl_conv'); end
+
+return
 figure(4);
 for k=1:max(id)
     plot(r(id==k)); hold on;

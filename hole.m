@@ -6,18 +6,11 @@ nc=10;
 nplt=16*8;
 
 L1=1; H1=1;
-L2=1/8; H2=L2;
+L2=1/4; H2=L2;
 hol=-1/2+1i/2;
-%hol=0;
+hol=0;
 
-a1=0; b1=0; c1=(sqrt(2)*L2)^2;
-fex=@(z) (a1+b1*abs(z-hol).^2).*log(abs(z-hol))+1*imag(z-hol+c1./(z-hol));
-uex=@(z) 2i./(z-hol).*(a1+b1*abs(z-hol).^2.*(1+2*log(abs(z-hol))))+1*(1-c1./(z-hol).^2);
-
-
-w1=[L1+1i*H1; 1i*H1; -L1+1i*H1]; w1=[L1; w1; -L1; conj(w1(end:-1:1))];
 w1=[L1+1i*H1; -L1+1i*H1]; w1=[w1; conj(w1(end:-1:1))];
-
 w2=[L2+1i*H2; -L2+1i*H2; -L2-1i*H2; L2-1i*H2];
 
 if(hol==0)
@@ -80,7 +73,6 @@ for k=kmin:kmax
     
     pol=[pol1;pol2;pol3]; zs=[z1;z2;z3]; un=[un1;un2;un3]; 
     id=[id1;id2+numel(i1);id3+numel(i1)+numel(i2)]; mass=[wq1;wq2;wq3];
-       
     
     xs=real(zs/a0);
     ys=imag(zs/a0);
@@ -95,11 +87,14 @@ for k=kmin:kmax
     wall=top|bot|left|right;
     hole=~wall;
     
-    bctype(hole)=1;
-    bctype(wall)=0;
-    bcdata(top)=1;    
+    if(numel(hol)==2)
+        bctype(hole)=1;
+        bcdata(top)=1;
+    else
+        bcdata(hole)=-1i;
+    end
     
-    %mass(:)=1;
+    mass(:)=1;
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
     res(k)=norm(r);
     rtot=res(k)^2;   
@@ -198,7 +193,7 @@ for k=1:max(id)
 end
 hold off; legend(num2str((1:max(id))'));
 
-x=linspace(-1,1,nplt); x(abs(x)<L2)=nan;
+x=linspace(-1,1,nplt+1); x(abs(x)<L2)=nan;
 [fx,ux,px]=ufun(x);
 figure(23); plot(x,real(fx),'k',x,imag(ux),'r',x,real(ux),'b');
 end

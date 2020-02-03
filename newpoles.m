@@ -20,9 +20,11 @@ b=(dir==0);
 dir(b)=-1i*dw(b);
 dir=dir./abs(dir);
 
-dir=dir*min(max(real(w))-min(real(w)),max(imag(w))-min(imag(w)));
+dst=abs(real(spdiag(conj(dir))*(repmat(w(:),1,m)-repmat(w(:).',m,1))));
+scl=max(dst,[],2)/sqrt(2);
+dir=dir.*scl;
 
-sigma=4; % FIXME
+sigma=4;
 beta=-exp(-sigma*(sqrt(n)-sqrt(1:n)));
 pol=repmat(w,1,n)+dir*beta; pol=pol(:);
 

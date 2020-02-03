@@ -1,0 +1,119 @@
+%!TEX root = ../main.tex
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\usepackage{./tex/matlabmatrix}
+\usepackage{embedfile}
+\embedfile{\jobname.tex}
+
+\usepackage{physics}
+\usepackage{array}
+\usepackage{empheq}
+\usepackage[export]{adjustbox}
+\usepackage[most]{tcolorbox}
+
+% AMSLaTeX packages
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage[algoruled]{algorithm2e}
+
+\usetheme{default}
+\useoutertheme{default}
+% we want to use images
+%\usepackage{graphicx}
+\usepackage{graphbox} %loads graphicx package
+\usepackage{movie15}
+\usepackage{hyperref}
+\usepackage{subcaption}
+
+
+% table relates packages
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage{multirow}
+% pick a font
+\usepackage{palatino}           
+% \usepackage{times}
+\usepackage{tikz}
+\usetikzlibrary[positioning,arrows,decorations.pathmorphing,backgrounds,fit,calc]
+% \AtBeginSection[]  % "Beamer, do the following at the start of every section"
+% {
+%   \begin{frame}<beamer> 
+%     \frametitle{Outline} % make a frame titled "Outline"
+%     \tableofcontents[currentsection]  % show TOC and highlight current section
+%   \end{frame}                    
+% }
+
+% \AtBeginSubsection[]
+% {
+%   \begin{frame}
+%     \frametitle{Outline}
+%     \tableofcontents[currentsection,currentsubsection]
+%   \end{frame}
+% }
+
+\AtBeginSection[]
+{
+   \begin{frame}
+       \frametitle{Outline}
+       \tableofcontents[currentsection]
+   \end{frame}
+}
+
+\newcommand{\ebox}[1][1em]{\framebox[#1]{\phantom{M}}}
+
+\setlength\arraycolsep{1.4pt}% some length
+
+%gets rid of navigation symbols
+\setbeamertemplate{navigation symbols}{}
+
+%gets rid of bottom navigation bars
+\setbeamertemplate{footline}[page number]{}
+\setbeamertemplate{headline}{}
+
+\renewcommand\vec{\mathbf}
+\newcommand{\uvec}[1]{\hat{\mathbf{#1}}}
+\newcommand{\conj}[1]{{\overline{#1}}}
+
+
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\blkdiag}{blockdiag}
+\DeclareMathOperator{\vecop}{vec}
+\newcommand{\kron}{\otimes}
+\newcommand{\transp}{\text{T}}
+\newcommand{\lavec}[1]{\underline{#1}}
+\newcommand{\phvec}[1]{\mathbf{#1}}
+\newcommand{\bigo}{\mathcal{O}}
+
+\newcommand{\core}{\mathcal{S}(\mathbf{r})}
+\renewcommand{\prec}{P^{[\mathbf{r}]}}
+
+\newtcbox{\redbox}[1][]{%
+	nobeforeafter, math upper, tcbox raise base,
+	enhanced, colframe=red!30!black,
+	colback=red!30, boxrule=1pt,
+	#1}
+
+\newtcbox{\bluebox}[1][]{%
+	nobeforeafter, math upper, tcbox raise base,
+	enhanced, colframe=blue!30!black,
+	colback=blue!30, boxrule=1pt,
+	#1}
+
+\newtcbox{\greenbox}[1][]{%
+	nobeforeafter, math upper, tcbox raise base,
+	enhanced, colframe=green!30!black,
+	colback=green!30, boxrule=1pt,
+	#1}
+
+\makeatletter
+\newbox\@backgroundblock
+\newenvironment{backgroundblock}[2]{%
+	\global\setbox\@backgroundblock=\vbox\bgroup%
+	\unvbox\@backgroundblock%
+	\vbox to0pt\bgroup\vskip#2\hbox to0pt\bgroup\hskip#1\relax%
+}{\egroup\egroup\egroup}
+\addtobeamertemplate{background}{\box\@backgroundblock}{}
+\makeatother
+

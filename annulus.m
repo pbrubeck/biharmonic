@@ -45,8 +45,9 @@ for k=kmin:kmax
     %bcdata=imag(un.*uex(zs))-1i*fex(zs);
     %bcdata(hole)=1i*mean(imag(bcdata(hole)));
     
-    %mass(:)=1;
+    mass(:)=1;
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
+    %[ufun,dofs(k),r]=bih2(n,zs,un,bctype,bcdata,w,pol,hol,mass);
     res(k)=norm(r);
     rtot=res(k)^2;
         

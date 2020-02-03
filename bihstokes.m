@@ -69,7 +69,6 @@ i=(bctype(:)>0);
 AR(i,:)=[real(G(i,:)),-imag(G(i,:)),real(F(i,:,1)),-imag(F(i,:,1)), real(L1(i,:))];
 AI(i,:)=[imag(G(i,:)), real(G(i,:)),imag(F(i,:,2)), real(F(i,:,2)), imag(L1(i,:))];
 
-
 % Obstacle in differential form
 i=(bctype(:)==4);
 G=zeros(size(R0,1),size(R0,2),2);
@@ -115,6 +114,7 @@ ja=find(a>0);
 %a(:)=1;
 P=spdiag(1./a(ja));
 A=A(:,ja)*P;
+
 z=A\r;
 x(ja)=P*z;
 
@@ -141,7 +141,7 @@ f=x(:,3)+1i*x(:,4);
 % h
 
 psi=@goursat;
-figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
+%figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
 
 function [psi,u,p]=goursat(s)
 nh=size(H,1);

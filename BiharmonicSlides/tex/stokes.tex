@@ -1,0 +1,92 @@
+%!TEX root = ../main.tex
+
+\section{Lightning Stokes}
+
+\begin{frame}
+\frametitle{Stokes flow: governing equations}
+2D Steady-state Stokes flow (slow, viscous $\text{Re}\ll 1$) on $\Omega$
+\begin{eqnarray*}
+-\nabla^2 \vec{u} + \nabla p &=& 0,\\
+\nabla\cdot \vec{u} &=& 0.
+\end{eqnarray*}
+with boundary conditions in $\partial\Omega$
+\bigskip
+\begin{itemize}
+\itemsep=1em
+\item Prescribed velocity $\vec{u}=\vec{U}_\text{data}$, in $\partial \Omega_D$
+\item ``Natural'' outflow $\uvec{n}\cdot\nabla\vec{u}-p\uvec{n}=0$ in $\partial \Omega_N$
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Stream function -- vorticity formulation}
+Introduce the stream function $\nabla\times(\uvec{e}_3 \psi)=\vec{u}$,
+\begin{eqnarray*}
+	-\nabla^2 \psi &=& \omega,\\
+	-\nabla^2 \omega &=& 0.
+\end{eqnarray*}
+This can be reduced into a single biharmonic equation
+\begin{equation*}
+\nabla^4 \psi = 0.
+\end{equation*}
+The boundary conditions are mapped to
+\bigskip
+\begin{itemize}
+\itemsep=1em
+\item Prescribed velocity $\nabla\times(\uvec{e}_3 \psi)=\vec{U}_\text{data}$, in $\partial \Omega_D$
+\item ``Natural'' outflow $\uvec{n}\cdot\nabla\vec{u}-p\uvec{n}=0$ is less clear in this formulation.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{The Goursat representation (simply connected $\Omega$)}
+Since $\nabla^4=(4\partial_\conj{z}\partial_z)^2$, any biharmonic function can be written as
+\begin{equation*}
+\psi(z,\conj{z})=\Im\left\{\conj{z}f(z)+g(z)\right\},
+\end{equation*}
+where $z=x+iy$, and $f(z)$ and $g(z)$ are analytic inside $\Omega$.
+
+\bigskip
+The physical variables are then recovered by
+\begin{equation*}
+u-iv = 2i\partial_z\psi = g'(z) + \conj{z} f'(z) - \conj{f(z)},
+\end{equation*}
+
+\begin{equation*}
+-\omega = 4\partial_\conj{z} \partial_z\psi = 4 \Im{f'(z)}.
+\end{equation*}
+And since $p$ and $-\omega$ are harmonic conjugates 
+\begin{equation*}
+p-i\omega = 4 f'(z).
+\end{equation*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Boundary conditions}
+
+For the Goursat representation, we form $Ax=b$ by imposing
+\bigskip
+\begin{itemize}
+\itemsep=1em
+\item Prescribed velocity $g'(z)+\conj{z}f'(z)-\conj{f(z)}=U-iV$, in $\partial \Omega_D$
+\item ``Natural'' outflow $g''(z)+\conj{z}f''(z)+3\conj{f'(z)}-f'(z)=0$ in $\partial \Omega_N$
+\end{itemize}
+\bigskip
+Compared to Laplace, we now have twice as many equations (Re, Im) and degrees of freedom, hence work is increased by a factor of 8.
+
+\bigskip
+The root-exponential convergence obtained in practice should follow from Gopal and Trefethen (ongoing research).
+\end{frame}
+
+\begin{frame}
+\frametitle{Biharmonic functions on multiply connected domains}
+To treat holes, one must include logarithmic terms
+\begin{equation*}
+\begin{split}
+\psi(z,\conj{z}) =& \Im\left\{\conj{z}f(z)+g(z)\right\} \\
++ &\sum_{j=1}^H (\alpha_j  + \beta_j\conj{z}z + c_j z + \conj{c_j z} ) \log\abs{z-h_j}.
+\end{split}
+\end{equation*}
+\end{frame}

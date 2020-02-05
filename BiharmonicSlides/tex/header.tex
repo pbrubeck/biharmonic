@@ -107,6 +107,12 @@
 	colback=green!30, boxrule=1pt,
 	#1}
 
+\newtcbox{\yellowbox}[1][]{%
+	nobeforeafter, math upper, tcbox raise base,
+	enhanced, colframe=yellow!30!black,
+	colback=yellow!30, boxrule=1pt,
+	#1}
+
 \makeatletter
 \newbox\@backgroundblock
 \newenvironment{backgroundblock}[2]{%
@@ -116,4 +122,12 @@
 }{\egroup\egroup\egroup}
 \addtobeamertemplate{background}{\box\@backgroundblock}{}
 \makeatother
+
+
+\addtobeamertemplate{navigation symbols}{}{%
+	\usebeamerfont{footline}%
+	\usebeamercolor[bg]{footline}%
+	\hspace{1em}%
+	\textcolor{\black}{\insertframenumber/\inserttotalframenumber}
+}
 

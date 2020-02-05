@@ -71,6 +71,7 @@ A=A(:,ja)*P;
 z=A\r;
 x(ja)=P*z;
 
+
 r=(r-A*z)/norm(r);
 
 dofs=length(x);
@@ -79,7 +80,7 @@ h=x(2*nb+1:end);
 x=reshape(x(1:2*nb),[],2);
 f=x(:,1)+1i*x(:,2);
 u=@eval_rat;
-figure(32); semilogy(1:nb,abs(f));
+%figure(32); semilogy(1:nb,abs(f));
 
 function [f0,f1]=eval_rat(s)
 nh=size(H,1);

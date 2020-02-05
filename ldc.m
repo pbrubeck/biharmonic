@@ -80,7 +80,7 @@ hold off; grid off; axis equal; axis off; axis tight;
 %cb=colorbar(); cb.TickLabelInterpreter='latex';
 if(ifprint), print('-depsc','ldc_soln'); end
 
-figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+figure(3); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
 plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
 hold off; axis equal; axis square;
@@ -94,4 +94,11 @@ xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(2,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
 text(2,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
 if(ifprint), print('-depsc','ldc_conv'); end
+
+
+
+L=0.2; wedge=[1i*L; 0; L]+w(3); ne=2;
+figure(4);
+subplot(1,2,1); eddy_hunter(ufun,wedge,ne,256);
+subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,256);
 end

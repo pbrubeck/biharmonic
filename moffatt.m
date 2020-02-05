@@ -2,7 +2,7 @@ function [res] = moffatt(alpha)
 if(nargin<1)
     alpha=pi/18;
 end
-ifprint=true;
+ifprint=false;
 prefix='moff';
 lw='linewidth';
 ms='markersize';
@@ -47,8 +47,8 @@ for k=1:kmax
     n=4*k;
     N=2*(n+1);
     x=chebpts(N,1);
-    sigma=4; h=1/3;
-    %x=2*exp(-sigma*(sqrt(n)-sqrt(h:h:n)))-1;
+    %scl=atanh(1-exp(-4*(sqrt(n/8)-1)));
+    %x=tanh(scl*linspace(-1,1,N));
     [zs,un]=polypts(w,rad,x);
 
     % Boundary data
@@ -120,4 +120,8 @@ grid on; set(gca,'xminorgrid','off','yminorgrid','off');
 if(ifprint)
     print('-depsc',sprintf('%s_%s',prefix,'vel'));
 end
+
+
+figure(4);
+eddy_hunter(ufun,w([2,3,1]),6);
 end

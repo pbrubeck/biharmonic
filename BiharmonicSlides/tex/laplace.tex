@@ -50,10 +50,9 @@ A x \approx b,
 
 \begin{frame}
 \frametitle{We choose our basis to be well conditioned and cheap to evaluate}
-
-\begin{equation*}
+\begin{empheq}[box=\yellowbox]{align*}
 f(z) \approx \sum_{k=0}^{N} a_k p_k (z) + \sum_{j=1}^{M} \frac{b_j}{z-z_j},
-\end{equation*}
+\end{empheq}
 where $N=\mathcal{O}(\sqrt{M})$, and $p_k(z)\in \mathbb{P}_k$, $k=0,\ldots,N$ are \textbf{``Vandermonde with Arnoldi''} polynomials that obey a $(k+2)$-term recurrence
 \begin{equation*}
 H_{k+1,k} p_{k+1}(z) = z p_{k}(z) - \sum_{j=0}^{k} H_{j,k} p_j(z), \quad p_0(z)=1.

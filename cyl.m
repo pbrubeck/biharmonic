@@ -1,5 +1,5 @@
 function [res]=cyl(kmax)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 iflong=true;
 
@@ -28,7 +28,7 @@ i0=1:length(w0);
 i1=i0(end)+(1:length(w1));
 w=[w0(:);w1(:)];
 
-kmin=1; 
+kmin=1;
 res=zeros(kmax,1);
 dofs=zeros(kmax,1);
 npol=repmat(kmin,size(w));
@@ -46,7 +46,7 @@ for k=kmin:kmax
 
     %disp(npol');
     if(iflong)
-        n=4*k;
+        n=max(12,4*k);
         h=1/3;
         sigma=log(4); beta=1/3;
         nub=k*k; kk=h/2:h:nub;

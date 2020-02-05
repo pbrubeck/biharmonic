@@ -1,9 +1,9 @@
 function [res]=bstep(kmax)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 
 nc=10;
-nplt=128;
+nplt=64;
 L1=1; L2=5; 
 H1=1; H2=1;
 %w=[L2+1i*H2; -L1+1i*H2; -L1-1i*H1; L2-1i*H1];
@@ -61,9 +61,9 @@ for k=kmin:kmax
     kk=adapt_hist(ri);
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
     npol=npol+1;
-    %full(sparse(id,ones(size(mass)),mass,max(id),1))
 end
 tsol=toc;
+
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -84,21 +84,16 @@ pp(zz==0)=-5;
 
 
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
-cs=[linspace(min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
+cs=[linspace(0.9*min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2);
-contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2);
+contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2); hold on;
+contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2); hold on;
 plot(w([1:end,1]),'-k',lw,2);
-%contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1);
-% au=abs(uu(:,:,j));
-% quiver(real(zz(:,:,j)),imag(zz(:,:,j)),real(uu(:,:,j))./au,imag(uu(:,:,j))./au,'k');
+colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
-hold off; grid off; axis off;
-colormap(jet(256)); shading interp; caxis([0,1]);
-xlim([-L1,L2]); ylim([-H1,H2]); axis equal; 
-
-%cb=colorbar(); cb.TickLabelInterpreter='latex';
+hold off; grid off; axis equal; 
+cb=colorbar(); cb.TickLabelInterpreter='latex';
 if(ifprint), print('-depsc','step_soln'); end
 
 
@@ -120,7 +115,6 @@ subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
 plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10);
 hold off; axis equal; axis square;
 
-
 subplot(1,2,1); 
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
@@ -129,6 +123,10 @@ xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
 if(ifprint), print('-depsc','step_conv'); end
+
+
+L=0.5; wedge=[1i*L; 0; L]-1i;
+figure(4); clf; eddy_hunter(ufun,wedge,0,256);
 
 return
 figure(4);

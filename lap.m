@@ -13,7 +13,6 @@ else
     [~,ii]=min(abs(Dwp),[],1);
     id=sub2ind(size(Dwp), ii, 1:size(Dwp,2));
     num=Dwp(id);
-    %num=ones(numel(pol),1);
 end
 NUM=spdiag(num);
 D=z(:)-pol(:).';
@@ -22,8 +21,21 @@ C1=-C0./D;
 % polynomial basis, discretely orthogonal
 [~,H]=polyfitA(z,z,n);
 [V0,V1]=polydiffA(z,H);
-R0=[V0, C0]; 
-R1=[V1, C1];
+% polynomials in holes, discretely orthogonal
+RH=1./(z(:)-hol(:).');
+nn=ceil(sqrt(numel(pol)/numel(w)));
+
+HH=zeros(nn+1,nn,numel(hol));
+HV0=zeros(numel(z),size(HH,1),numel(hol));
+HV1=zeros(numel(z),size(HH,1),numel(hol));
+for e=1:numel(hol)
+    [~,HH(:,:,e)]=polyfitA(RH(:,e),RH(:,e),nn);
+    [HV0(:,:,e),HV1(:,:,e)]=polydiffA(RH(:,e),HH(:,:,e));
+    HV1(:,:,e)=spdiag(-RH(:,e).^2)*HV1(:,:,e);
+end
+R0=[V0, reshape(HV0,size(V0,1),[]), C0]; 
+R1=[V1, reshape(HV1,size(V1,1),[]), C1];
+
 
 F=zeros(size(R0));
 L=zeros(size(R0,1),numel(hol));
@@ -31,7 +43,6 @@ L=zeros(size(R0,1),numel(hol));
 i=(bctype(:)==0);
 F(i,:)=R0(i,:);
 L(i,:)=log(z(i)-hol(:).');
-
 i=(bctype(:)==1);
 F(i,:)=spdiags(conj(un(i)))*R1(i,:);
 L(i,:)=spdiags(conj(un(i)))*(1./(z(i)-hol(:).'));
@@ -39,8 +50,7 @@ L(i,:)=spdiags(conj(un(i)))*(1./(z(i)-hol(:).'));
 A=[real(F),-imag(F),real(L)];
 b=bcdata(:);
 
-%D=[];
-%mass=[];
+
 if(isempty(mass))
 if(isempty(D))
     W=speye(size(A,1))/norm(b);
@@ -63,15 +73,14 @@ r=W*b;
 x=zeros(size(A,2),1);
 
 % Right preconditioning
-a=max(abs(A),[],1);
-ja=a>eps;
+%a=max(abs(A),[],1);
+a=sqrt(sum(abs(A).^2,1));
+ja=a>0;
 P=spdiag(1./a(ja));
 A=A(:,ja)*P;
 
 z=A\r;
 x(ja)=P*z;
-
-
 r=(r-A*z)/norm(r);
 
 dofs=length(x);
@@ -86,15 +95,21 @@ function [f0,f1]=eval_rat(s)
 nh=size(H,1);
 nt=numel(pol);
 ns=numel(hol);
-
+RS=1./(s(:)-hol(:).');
 T=zeros(numel(s),nb,2);
 [T(:,1:nh,1),T(:,1:nh,2)]=polydiffA(s,H);
+for j=1:size(HH,3)
+    j1=1+nh+(j-1)*size(HH,1); j2=nh+j*size(HH,1);
+    [T(:,j1:j2,1),T(:,j1:j2,2)]=polydiffA(RS(:,j),HH(:,:,j));
+    T(:,j1:j2,2)=spdiag(-RS(:,j).^2)*T(:,j1:j2,2);
+end
+nh=size(H,1)+size(HH,1)*size(HH,3);
 T(:,1+nh:nt+nh,1)=(1./(s(:)-pol(:).'))*NUM;
 T(:,1+nh:nt+nh,2)=-T(:,1+nh:nt+nh,1)./(s(:)-pol(:).');
 
 S=zeros(numel(s),ns,2);
 S(:,:,1)=log(s(:)-hol(:).');
-S(:,:,2)=1./(s(:)-hol(:).');
+S(:,:,2)=RS;
 
 f0=reshape(T(:,:,1)*f+S(:,:,1)*h,size(s));
 f1=reshape(T(:,:,2)*f+S(:,:,2)*h,size(s));

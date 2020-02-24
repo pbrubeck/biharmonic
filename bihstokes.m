@@ -1,32 +1,53 @@
-function [psi,dofs,r] = bihstokes(n,z,un,bctype,bcdata,w,pol,hol,mass)
+function [psi,dofs,r] = bihstokes(n,z,un,bctype,bcdata,w,pol,hol,mass,ifp0)
 % Solves the biharmonic equation with the lightning method
 if(nargin<6), w=[]; end
 if(nargin<7), pol=[]; end
 if(nargin<8), hol=[]; end
 if(nargin<9), mass=[]; end
+if(nargin<10), ifp0=false; end
+iflog=false;
 
-% singular basis, normalized to unity in the nearest corner
-if(isempty(w))
-    num=ones(numel(pol),1);
-else
-    Dwp=w(:)-pol(:).';
-    [~,ii]=min(abs(Dwp),[],1);
-    id=sub2ind(size(Dwp), ii, 1:size(Dwp,2));
-    num=1i*Dwp(id);
-end
-NUM=spdiag(num);
-D=z(:)-pol(:).';
-C0=(1./D)*NUM;
-C1=-C0./D;
+% simple poles
+[~,jj]=min(abs(w(:)-pol(:).'),[],1);
+alpha=w(jj);
+beta=1./(pol-alpha);
+alpha=reshape(alpha,1,[]);
+beta=reshape(beta,1,[]);
+
+num1=min(1,beta);
+num0=1./max(1,beta);
+D=(z(:)-alpha).*beta-1;
+C0=num0./D;
+C1=-num1./(D.^2);
 
 % polynomial basis, discretely orthogonal
-[~,H]=polyfitA(z,z,n);
-[V0,V1]=polydiffA(z,H);
-R0=[V0, C0]; 
-R1=[V1, C1];
+if(n>=0)
+    [~,H]=polyfitA(z,z,n);
+    [V0,V1]=polydiffA(z,H);
+else
+    H=zeros(0,1);
+    V0=zeros(numel(z),0); V1=V0;
+end
+
+% polynomials in holes, discretely orthogonal
+RH=1./(z(:)./hol(:).'-1); 
+nn=ceil(sqrt(numel(pol)/numel(w)));
+
+HH=zeros(nn+1,nn,numel(hol));
+HV0=zeros(numel(z),size(HH,1),numel(hol));
+HV1=zeros(numel(z),size(HH,1),numel(hol));
+for e=1:numel(hol)
+    [~,HH(:,:,e)]=polyfitA(RH(:,e),RH(:,e),nn);
+    [HV0(:,:,e),HV1(:,:,e)]=polydiffA(RH(:,e),HH(:,:,e));
+    HV1(:,:,e)=spdiag(-RH(:,e).^2/hol(e))*HV1(:,:,e);
+end
+R0=[V0, reshape(HV0(:,2:end,:),numel(z),[]), C0]; 
+R1=[V1, reshape(HV1(:,2:end,:),numel(z),[]), C1];
 
 % logarithmic basis
-HZ=z(:)-hol(:).'; XZ=real(HZ); YZ=imag(HZ);
+HZ=z(:)-hol(:).';
+if(~iflog), HZ=zeros(numel(z),0); end
+XZ=real(HZ); YZ=imag(HZ);
 QZ=abs(HZ).^2;
 LZ=log(QZ)/2;
 RZ=1./HZ;
@@ -34,13 +55,12 @@ L0=[LZ, XZ.*LZ, YZ.*LZ, QZ.*LZ];
 L1=1i*[RZ, XZ.*RZ+LZ, YZ.*RZ-1i*LZ, QZ.*RZ.*(2*LZ+1)];
 ZH=zeros(size(L0));
 
-
 G0=R0;
-F0=spdiag(conj(z))*G0;
+F0=spdiag(conj(z))*R0;
 G1=spdiag(un)*R1;
 i=bctype==-1;
 G1(i,:)=0;
-F1=spdiag(conj(z))*G1+spdiag(conj(un))*G0;
+F1=spdiag(conj(z).*un)*R1+spdiag(conj(un))*R0;
 F1(i,:)=F1(i,:);
 
 AR=zeros(numel(z),4*size(R0,2)+size(L0,2));
@@ -53,6 +73,7 @@ AR(i,:)=[imag(G1(i,:)), real(G1(i,:)),imag(F1(i,:)), real(F1(i,:)), imag(L1(i,:)
 AI(i,:)=[imag(G0(i,:)), real(G0(i,:)),imag(F0(i,:)), real(F0(i,:)), real(L0(i,:))];
 
 G=R1;
+
 F=zeros(size(R0,1),size(R0,2),2);
 F(:,:,1)=spdiag(conj(z))*R1-R0;
 F(:,:,2)=spdiag(conj(z))*R1+R0;
@@ -82,10 +103,8 @@ AI(i,:)=[imag(G(i,:,2)), real(G(i,:,2)),imag(F(i,:,2)), real(F(i,:,2)), ZH(i,:)]
 A=[AR; AI];
 b=[real(bcdata(:)); -imag(bcdata(:))];
 
-%D=[];
-%mass=[];
 if(isempty(mass))
-if(isempty(D))
+if(isempty(w))
     W=speye(size(A,1))/norm(b);
 else
     Dzw=z(:)-w(:).';
@@ -104,58 +123,102 @@ end
 
 % Left preconditioning
 A=W*A;
-r=W*b; 
-x=zeros(size(A,2),1);
+r=W*b;
+
+ifp0=false;
+if(ifp0)
+    [~,i]=min(abs(z(:)-1i));
+    
+    C=zeros(5-any(bctype==0),size(A,2));
+    F1=sum(R1,1); G1=zeros(size(F1)); % set sum(p)=0
+    C(1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    
+    G1=sum(R0(i,:),1);  F1=zeros(size(G1)); % set real(g(a))=real(f(a))=0
+    C(2,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    C(3,:)=[real(F1),-imag(F1),real(G1),-imag(G1), imag(L0(i,:))];
+        
+    G1=sum(R0(i,:),1);  F1=z(i)'*R0(i,:); % set psi(a)=A(a)=0
+    C(end,:)=[imag(G1),real(G1),imag(F1),real(F1), imag(L0(i,:))];
+    C(4,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    
+    A=[A;C];
+    r=[r;zeros(size(C,1),1)];
+end
 
 % Right preconditioning
-a=max(abs(A),[],1);
-ja=find(a>0);
+a=sqrt(sum(A.^2,1));
+%a=max(abs(A),[],1);
+ja=find(a>10*eps);
 
 %a(:)=1;
 P=spdiag(1./a(ja));
 A=A(:,ja)*P;
 
-z=A\r;
-x(ja)=P*z;
+y=A\r;
+x=zeros(size(A,2),1);
+x(ja)=P*y;
 
-r=(r-A*z)/norm(r);
-dofs=length(z);
+r=(r-A*y)/norm(r);
+r=r(1:2*numel(z));
+
+dofs=length(y);
 nb=size(R0,2);
 h=x(4*nb+1:end);
 x=reshape(x(1:4*nb),[],4);
 g=x(:,1)+1i*x(:,2);
 f=x(:,3)+1i*x(:,4);
 
-
-% [f,g]
-% h
-% f(:)=0; g(:)=0; h(:)=0;
-% g(1)=7.50936;
-% f(2)=-6.50936;
-% h(1)=8.44817;
-% h(4)=4.57055;
-% g(1)=1i*g(1);
-% f(2)=4i/2.53*f(2);
-% 
-% [f,g]
-% h
-
 psi=@goursat;
-%figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
+figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
+
+return
+%figure(99); imagesc((abs(A'*A))); colormap(gray(256));
+
+%[cmax,imax]=max(abs(R0).^2+abs(R1).^2,[],1);[~,kk]=max(cmax);
+[~,imax]=min(abs(z-1/sqrt(eps))); [~,kk]=max(abs(A(imax,:)));
+%kk=1:size(A,2);
+%kk=randi(size(A,2),1,6);
+B=A(:,kk);
+
+[~,ii]=sortrows([imag(z),real(z)]);
+xplt=real(z(ii));
+jj=ii(xplt<0);
+ii=ii(xplt>0);
+figure(67); 
+subplot(2,1,1);
+loglog(-xplt(xplt<0),[abs(B(jj,:)), abs(B(jj,:))],'.');
+%title(sprintf('pol %.2E %+ .2Ei',real(pol(jmax)),imag(pol(jmax))));
+subplot(2,1,2);
+loglog(xplt(xplt>0),[abs(B(ii,:)), abs(B(ii,:))],'.'); 
+
+
+
+
+
 
 function [psi,u,p]=goursat(s)
 nh=size(H,1);
-nr=numel(pol);
-T=zeros(numel(s),length(f),2);
-
-j1=1:nh;
-j2=(j1(end)+1):(j1(end)+nr);
-[T(:,j1,1),T(:,j1,2)]=polydiffA(s,H);
-T(:,j2,1)=(1./(s(:)-pol(:).'))*NUM;
-T(:,j2,2)=-T(:,j2,1)./(s(:)-pol(:).');
+nt=numel(pol);
+ns=numel(hol);
+RS=1./(s(:)./hol(:).'-1);
+T=zeros(numel(s),nb,2);
+if(nh>0)
+    [T(:,1:nh,1),T(:,1:nh,2)]=polydiffA(s,H);
+end
+for j=1:size(HH,3)
+    j1=1+nh+(j-1)*(size(HH,1)-1); j2=nh+j*(size(HH,1)-1);
+    [SH0,SH1]=polydiffA(RS(:,j),HH(:,:,j));
+    T(:,j1:j2,1)=SH0(:,2:end);
+    T(:,j1:j2,2)=spdiag(-RS(:,j).^2/hol(j))*SH1(:,2:end);
+end
+nh=size(H,1)+(size(HH,1)-1)*size(HH,3);
+T(:,1+nh:nt+nh,1)=num0./((s(:)-alpha).*beta-1);
+T(:,1+nh:nt+nh,2)=-num1.*((s(:)-alpha).*beta-1).^-2;
 
 L=zeros(numel(s),length(h),2);
-HS=s(:)-hol(:).'; XS=real(HS); YS=imag(HS);
+HS=s(:)-hol(:).'; 
+if(~iflog), HS=zeros(numel(s),0); end
+XS=real(HS); YS=imag(HS);
 QS=abs(HS).^2;
 LS=log(QS)/2;
 RS=1./HS;
@@ -167,6 +230,8 @@ g0=T(:,:,1)*g; g1=T(:,:,2)*g;
 h0=L(:,:,1)*h; h1=L(:,:,2)*h;
 
 psi=reshape(-1i*(g0+conj(s(:)).*f0+1i*h0),size(s));
+%psi(:)=imag(g1); %psi(s==-1i)=0;
+
 u=reshape(conj(g1+conj(s(:)).*f1-conj(f0)+h1),size(s));
 p=reshape(conj(4*f1),size(s));
 end

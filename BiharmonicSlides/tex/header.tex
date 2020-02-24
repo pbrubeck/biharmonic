@@ -2,7 +2,6 @@
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
 
-\usepackage{./tex/matlabmatrix}
 \usepackage{embedfile}
 \embedfile{\jobname.tex}
 
@@ -25,13 +24,12 @@
 \usepackage{graphbox} %loads graphicx package
 \usepackage{movie15}
 \usepackage{hyperref}
-\usepackage{subcaption}
-
 
 % table relates packages
 \usepackage{booktabs}
 \usepackage{multicol}
 \usepackage{multirow}
+\usepackage{subcaption}
 % pick a font
 \usepackage{palatino}           
 % \usepackage{times}
@@ -53,13 +51,13 @@
 %   \end{frame}
 % }
 
-\AtBeginSection[]
-{
-   \begin{frame}
-       \frametitle{Outline}
-       \tableofcontents[currentsection]
-   \end{frame}
-}
+%\AtBeginSection[]
+%{
+%   \begin{frame}
+%       \frametitle{Outline}
+%       \tableofcontents[currentsection]
+%   \end{frame}
+%}
 
 \newcommand{\ebox}[1][1em]{\framebox[#1]{\phantom{M}}}
 
@@ -73,8 +71,6 @@
 \setbeamertemplate{headline}{}
 
 \renewcommand\vec{\mathbf}
-\newcommand{\uvec}[1]{\hat{\mathbf{#1}}}
-\newcommand{\conj}[1]{{\overline{#1}}}
 
 
 \DeclareMathOperator{\diag}{diag}
@@ -122,12 +118,4 @@
 }{\egroup\egroup\egroup}
 \addtobeamertemplate{background}{\box\@backgroundblock}{}
 \makeatother
-
-
-\addtobeamertemplate{navigation symbols}{}{%
-	\usebeamerfont{footline}%
-	\usebeamercolor[bg]{footline}%
-	\hspace{1em}%
-	\textcolor{\black}{\insertframenumber/\inserttotalframenumber}
-}
 

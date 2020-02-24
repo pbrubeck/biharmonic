@@ -8,12 +8,16 @@ va='VerticalAlignment';
 ha='HorizontalAlignment';
 
 dw=w([1,3])-w(2);
-R=min(abs(dw));
 un=mean(dw./abs(dw));
+tha=angle(un);
+R=mean(abs(dw)); 
 a=R*un;
+
+
 f0=real(ufun(w(2)));
 f=@(t) real(ufun(w(2)+a*t)-f0);
-cf=chebfun(f,[0,1]);
+cf=chebfun(f,[0,1],'splitting','on');
+
 
 x0=[roots(cf);1];
 xe=roots(diff(cf));
@@ -23,14 +27,14 @@ if(ne>0)
 end
 
 tol=0;
-x0=x0(x0>tol);
-xe=xe(xe>tol);
+%x0=x0(x0>tol);
+%xe=xe(xe>tol);
 
 t=linspace(0,1,nplt);
 r=R*(diff(x0)*t+x0(1:end-1)*(1+0*t));
 r=reshape(r',1,[]);
 
-tha=angle(a);
+
 da=angle(dw(1)./dw(2))/2;
 th=linspace(tha-da,tha+da,nplt);
 zz=w(2)+r(:)*exp(1i*th);
@@ -43,7 +47,6 @@ cs=f0+fe*q;
 cs=[cs(:);f0];
 
 
-
 psi=ufun(zz); 
 contour(real(zz),imag(zz),real(psi),cs,'k'); hold on;
 if(ne==0), ne=length(xe); end
@@ -53,4 +56,6 @@ for e=1:ne
 end
 plot(w,'k'); hold off;
 axis equal;
+
+
 end

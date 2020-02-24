@@ -1,4 +1,4 @@
-function [pol,z,un,id,mass] = adapt_poles(npol,w,rad)
+function [pol,z,un,id,mass,npol] = adapt_poles(npol,w,rad)
 % returns n exponentially clustered poles for each vertex w
 w=w(:);
 if(nargin<3)
@@ -28,7 +28,7 @@ b=(dir==0);
 dir(b)=-1i*dw(b,2);
 dir=-dir./abs(dir);
 
-if(sum(angle(dw(:,1)./dw(:,2)))>0)
+if(sum(angle(dw(:,1)./dw(:,2)))>=0)
     [dmax,kmax]=max(abs(dw(:,1)));
     ww=(dw(kmax,1)/dmax)*w;
     wr=sort(real(ww)); wr=wr([1 end]);
@@ -41,21 +41,23 @@ else
 end
 dir=dir.*scl;
 
+tol=eps;
 pol=[];z=[];un=[];id=[];mass=[];
 for i=1:m
     n=npol(i);
     beta=-exp(-sigma*(sqrt(n)-sqrt(1:n)'));
-    beta=beta(abs(beta)>1E-15);
+    beta=beta(abs(beta)>tol);
     n=length(beta);
+    npol(i)=n;
     poli=w(i)+dir(i)*beta;
 
     % Sample points at the boundary
     sj=sqrt(h/2:h:n)';
     zq=0.5*exp(-sigma*(sqrt(n)-sj));
-    wq=0.5*h*sigma*zq./sj;
-    wq(end)=wq(end)/2;
+    wq=0.5*h*sigma*zq./sj; wq(end)=wq(end)/2;
+    wq=zq;
 
-    kd=abs(zq)>1E-15;
+    kd=abs(zq)>tol;
     zq=zq(kd);
     wq=wq(kd);
     np=length(zq);
@@ -73,6 +75,10 @@ for i=1:m
     uni=uni./abs(uni);
     uni=[repmat(-uni(1),np,1),repmat(uni(2),np,1)];
     
+    % Circular boundaries
+    [zi(:,1),uni(:,1)]=circ(rad(left(i)),w(left(i)),w(i),zi(:,1),uni(:,1));
+    [zi(:,2),uni(:,2)]=circ(rad(i),w(i),w(right(i)),zi(:,2),uni(:,2));
+    
     pol=[pol;poli(:)];
     z=[z;zi(:)];
     un=[un;uni(:)];
@@ -80,21 +86,14 @@ for i=1:m
     mass=[mass;wi(:)];
 end
 
-% Circular boundaries % TODO
-% for k=1:size(zs,4)
-%     for j=1:size(zs,3)
-%         for i=1:size(zs,2)
-%             for l=1:size(zs,1)
-%                 s=mod(l-k,m)+1;
-%                 if(rad(s)<inf)
-%                     t=(j/(size(zs,3)))*beta(i)*(3-2*k);
-%                     t=sign(t)-t;
-%                     dz=exp(1i*omega(s)*t)*zr(s);
-%                     zs(l,i,j,k)=zc(s)+dz;
-%                     un(l,i,j,k)=dz/rad(s);
-%                 end
-%             end
-%         end
-%     end
-% end
+function [z,un]=circ(r,a,b,z,un)
+    if(~isinf(r))
+        da=asin(abs(b-a)/(2*r));
+        R=(b-a)/(2i*sin(da));
+        c=b-R*exp(1i*da);
+        t=2*(z-a)/(b-a)-1;
+        un=(R/r)*exp(1i*da*t);
+        z=c+r*un;
+    end
+end
 end

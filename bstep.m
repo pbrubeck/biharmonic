@@ -126,7 +126,7 @@ if(ifprint), print('-depsc','step_conv'); end
 
 
 L=0.5; wedge=[1i*L; 0; L]-1i;
-figure(4); clf; eddy_hunter(ufun,wedge,0,256);
+figure(4); clf; eddy_hunter(ufun,wedge,2,256);
 
 return
 figure(4);

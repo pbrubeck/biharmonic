@@ -1,5 +1,5 @@
 function [res]=ldc(kmax)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 
 w=[1+1i;-1+1i;-1-1i;1-1i];
@@ -99,6 +99,6 @@ if(ifprint), print('-depsc','ldc_conv'); end
 
 L=0.2; wedge=[1i*L; 0; L]+w(3); ne=2;
 figure(4);
-subplot(1,2,1); eddy_hunter(ufun,wedge,ne,256);
-subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,256);
+subplot(1,2,1); eddy_hunter(ufun,wedge,ne,64);
+subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,64);
 end

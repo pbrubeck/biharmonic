@@ -5,7 +5,8 @@ if(nargin<7), pol=[]; end
 if(nargin<8), hol=[]; end
 if(nargin<9), mass=[]; end
 if(nargin<10), ifp0=false; end
-iflog=false;
+iflog=true;
+
 
 % simple poles
 [~,jj]=min(abs(w(:)-pol(:).'),[],1);
@@ -117,51 +118,62 @@ else
     W=spdiag([wt;wt]);
 end
 else
-    mass=sqrt(mass);
-    W=spdiag([mass;mass]);
+    wt=sqrt(mass);
+    W=spdiag([wt;wt]);
 end
 
 % Left preconditioning
 A=W*A;
 r=W*b;
 
-ifp0=false;
+%ifp0=false; %ifp0=true;
+nsp=0; GB=0;
 if(ifp0)
-    [~,i]=min(abs(z(:)-1i));
+    w0=w(end); % Some arbitrary point
+    [~,i]=min(abs(z(:)-w0));
+    nsp=5-any(bctype==0);
+    C=zeros(nsp,size(A,2));
     
-    C=zeros(5-any(bctype==0),size(A,2));
-    F1=sum(R1,1); G1=zeros(size(F1)); % set sum(p)=0
-    C(1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
-    
-    G1=sum(R0(i,:),1);  F1=zeros(size(G1)); % set real(g(a))=real(f(a))=0
-    C(2,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
-    C(3,:)=[real(F1),-imag(F1),real(G1),-imag(G1), imag(L0(i,:))];
-        
-    G1=sum(R0(i,:),1);  F1=z(i)'*R0(i,:); % set psi(a)=A(a)=0
+    G1=R0(i,:);  F1=z(i)'*R0(i,:); % set psi(w0)=0
     C(end,:)=[imag(G1),real(G1),imag(F1),real(F1), imag(L0(i,:))];
-    C(4,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
     
-    A=[A;C];
-    r=[r;zeros(size(C,1),1)];
+    F1=mass'*R1; G1=zeros(size(F1)); % set mean(p)=0
+    C(end-1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    
+    G1=R1(i,:);  F1=zeros(size(G1)); % set g'(w0)=0
+    C(1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    C(2,:)=[imag(G1), real(G1),imag(F1), real(F1), imag(L0(i,:))];
+    
+    G1=R0(i,:);  F1=zeros(size(G1)); % set real(g(w0))=0
+    C(3,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+
+    [GB,rd]=rref(C); % Choose pivots
+    kd=setdiff(1:size(C,2),rd);
+    GB = -GB(:,kd);
+    A = A(:,kd)+A(:,rd)*GB;
 end
 
 % Right preconditioning
 a=sqrt(sum(A.^2,1));
 %a=max(abs(A),[],1);
-ja=find(a>10*eps);
-
 %a(:)=1;
+
+ja=find(a>0); 
 P=spdiag(1./a(ja));
 A=A(:,ja)*P;
 
 y=A\r;
+r=(r-A*y)/norm(r);
+dofs=length(y);
+
 x=zeros(size(A,2),1);
 x(ja)=P*y;
+if(nsp>0)
+    xx=zeros(numel(x)+size(GB,1),1);
+    xx(kd)=x; xx(rd)=GB*x; x=xx;
+    C*x
+end
 
-r=(r-A*y)/norm(r);
-r=r(1:2*numel(z));
-
-dofs=length(y);
 nb=size(R0,2);
 h=x(4*nb+1:end);
 x=reshape(x(1:4*nb),[],4);
@@ -169,31 +181,15 @@ g=x(:,1)+1i*x(:,2);
 f=x(:,3)+1i*x(:,4);
 
 psi=@goursat;
-figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
-
 return
-%figure(99); imagesc((abs(A'*A))); colormap(gray(256));
 
-%[cmax,imax]=max(abs(R0).^2+abs(R1).^2,[],1);[~,kk]=max(cmax);
-[~,imax]=min(abs(z-1/sqrt(eps))); [~,kk]=max(abs(A(imax,:)));
-%kk=1:size(A,2);
-%kk=randi(size(A,2),1,6);
-B=A(:,kk);
+if(ifaaa)
+    atol=1E-5;
+    [af0,af1,ag0,ag1] = aaa_goursat(z,R0*f,R1*f,R0*g,R1*g,atol);
+    psi=@(z) eval_goursat(af0,af1,ag0,ag1,z);
+end
 
-[~,ii]=sortrows([imag(z),real(z)]);
-xplt=real(z(ii));
-jj=ii(xplt<0);
-ii=ii(xplt>0);
-figure(67); 
-subplot(2,1,1);
-loglog(-xplt(xplt<0),[abs(B(jj,:)), abs(B(jj,:))],'.');
-%title(sprintf('pol %.2E %+ .2Ei',real(pol(jmax)),imag(pol(jmax))));
-subplot(2,1,2);
-loglog(xplt(xplt>0),[abs(B(ii,:)), abs(B(ii,:))],'.'); 
-
-
-
-
+%figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
 
 
 function [psi,u,p]=goursat(s)
@@ -230,9 +226,55 @@ g0=T(:,:,1)*g; g1=T(:,:,2)*g;
 h0=L(:,:,1)*h; h1=L(:,:,2)*h;
 
 psi=reshape(-1i*(g0+conj(s(:)).*f0+1i*h0),size(s));
-%psi(:)=imag(g1); %psi(s==-1i)=0;
-
 u=reshape(conj(g1+conj(s(:)).*f1-conj(f0)+h1),size(s));
 p=reshape(conj(4*f1),size(s));
 end
+
+
+
+function [af0,af1,ag0,ag1] = aaa_goursat(Z,f0,f1,g0,g1,tol)
+if(nargin<6), tol=1E-6; end
+N = numel(Z);
+[af0,polf0] = aaa(f0,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
+[af1,polf1] = aaa(f1,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
+[ag0,polg0] = aaa(g0,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
+[ag1,polg1] = aaa(g1,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
+
+return
+inpolygonc = @(z,w) inpolygon(real(z), ...
+            imag(z),real(w),imag(w));  
+polaaa = [polf0(:);polf1(:);polg0(:);polg1(:)];
+        
+if isempty(find(inpolygonc(polaaa,w),1)) % AAA successful
+else                                     % AAA unsuccess.: pole in region
+   %badpol = polaaa(find(inpolygonc(polaaa,ww)));% poles in polygon
+    warning('GOURSAT AAA compression unsuccessful; returning uncompressed solution.')
+end
+end
+
+
+
+function [psi,u,p]=eval_goursat(af0,af1,ag0,ag1,s)
+L=zeros(numel(s),length(h),2);
+HS=s(:)-hol(:).'; 
+if(~iflog), HS=zeros(numel(s),0); end
+XS=real(HS); YS=imag(HS);
+QS=abs(HS).^2;
+LS=log(QS)/2;
+RS=1./HS;
+L(:,:,1)=[LS, XS.*LS, YS.*LS, QS.*LS];
+L(:,:,2)=1i*[RS, XS.*RS+LS, YS.*RS-1i*LS, QS.*RS.*(2*LS+1)];
+
+f0=af0(s(:));  f1=af1(s(:));
+g0=ag0(s(:));  g1=ag1(s(:)); 
+h0=L(:,:,1)*h; h1=L(:,:,2)*h;
+
+psi=reshape(-1i*(g0+conj(s(:)).*f0+1i*h0),size(s));
+u=reshape(conj(g1+conj(s(:)).*f1-conj(f0)+h1),size(s));
+p=reshape(conj(4*f1),size(s));
+end
+
+
+
+
 end

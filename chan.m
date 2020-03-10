@@ -1,9 +1,9 @@
 function [res]=chan(kmax,iprob)
 ifprint=false;
 ifslow=false;
+maxpol=10;
 
-nc=10;
-nplt=32; Lplt=5;
+nplt=64; Lplt=5;
 if(nargin<2), iprob=1; end
 
 L1=5; H1=1;
@@ -88,7 +88,6 @@ if(ifslow), npol(:)=k; end
     un2=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
     id2=repmat(4,length(uw),length(tt));
     wq2=ones(size(z2));
-    %wq2=min(abs(z2).^2)./abs(z2).^2;
 
     mpol=ones(size(w));
     mpol([1,2,5])=npol(1:3).^2;
@@ -116,23 +115,33 @@ if(ifslow), npol(:)=k; end
     if(iprob==1)
     bcdata(top)=-1i*(s2-imag(ftop(zs(top))))-imag(un(top).*utop(zs(top)));
     bcdata(bot)=-1i*(0-imag(ftop(zs(bot))))-imag(un(bot).*utop(zs(bot)));
-    
     bctype(:)=1; bcdata=-conj(utop(zs));
     end
 
-    %mass(id<=3)=1;
-    mass(:)=1; 
+    mass(id>=2)=1;
+    %mass(:)=1; 
     ifp0=true;
-    %ifp0=false;
+    ifp0=false;
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass,ifp0);
     res(k)=norm(r);
     ri=full(sparse([id;id],ones(size(r)),r.^2,max(id),1));
     kk=adapt_hist(ri);
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
+    
     npol=npol+1;
+    npol=min(npol,maxpol);
 end
 tsol=toc;
 wx=real(w); w=w+(Lplt/max(wx)-1)*wx;
+
+
+
+
+figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+L=0.5; wedge=[1i*L; 0; L]+w(2); ne=0; nce=4; stol=res(end);
+cs1=eddy_hunter(@vfun,wedge,ne,nplt,nce,stol); title('First Eddy');
+if(ifprint), print('-depsc','step_eddy'); set(gcf,'Renderer','opengl'); end
+
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -144,37 +153,39 @@ x=linspace(x1,x2,nx);
 y=linspace(y1,y2,ny);
 [xx,yy]=ndgrid(x,y); 
 zz=xx+1i*yy;
-
 [inp,onp]=inpolygon(real(zz),imag(zz),real(w),imag(w)); ib=(inp|onp);
-psi=(1+1i)*nan(size(zz)); uu=psi; pp=psi;
+psi=nan(size(zz)); uu=nan(size(zz)); pp=nan(size(zz));
 tic;
 [psi(ib),uu(ib),pp(ib)]=vfun(zz(ib));
+psi=psi-psi(zz==0);
 tval=toc*1E3/nnz(ib);
-psi=psi-real(vfun(0));
-pp(zz==0)=nan;
+pp(zz==0)=-5;
 
-
-%[psi0,u0,p0]=ufun(zp0);p0
-
+nc=10;
+cs1=cs1(:);
+cs=[linspace(stol,max(real(psi(:))),nc)';cs1(abs(cs1)>stol)]; tc=1E-3;
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
-cs=[linspace(min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
-
-
 figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+subplot(1,2,1);
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2);
-contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2);
-plot(w([1:end,1]),'-k',lw,2);
-%contour(real(zz),imag(zz),imag(psi),numel(cs),'k',lw,1);
-% au=abs(uu);
-% quiver(real(zz),imag(zz),real(uu)./au,imag(uu)./au,'k');
+contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
+contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
+%plot(w([1:end,1]),'-k',lw,2);
+colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
-hold off; grid off; axis off;
-colormap(jet(256)); shading interp; caxis([0,1]);
-xlim([x1,x2]); ylim([y1,y2]); axis equal; 
+hold off; grid off; axis equal; 
+%cf=colorbar(); cf.TickLabelInterpreter='latex';
 
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-if(ifprint), print('-depsc','chan_soln'); end
+subplot(1,2,2); 
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
+if(ifprint), print('-depsc','step'); set(gcf,'Renderer','opengl'); end
+
+return
 
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end

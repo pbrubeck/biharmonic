@@ -1,9 +1,9 @@
 function [res]=bstep(kmax)
-ifprint=false;
+ifprint=true;
 ifslow=false;
 
 nc=10;
-nplt=64;
+nplt=128;
 L1=1; L2=5; 
 H1=1; H2=1;
 %w=[L2+1i*H2; -L1+1i*H2; -L1-1i*H1; L2-1i*H1];
@@ -65,6 +65,21 @@ end
 tsol=toc;
 
 
+figure(2); clf;
+L=0.5; wedge=[1i*L; 0; L]+w(6); ne=0; nce=4; stol=res(end);
+subplot(1,2,1); cs1=eddy_hunter(ufun,wedge,ne,nplt,nce,stol); title('First Eddy');
+%subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,nplt,nc,stol);
+L=0.03; wedge=[1i*L; 0; L]+w(6);
+subplot(1,2,2); eddy_hunter(ufun,wedge,ne,nplt,nce,stol); title('Second Eddy');
+
+if(ifprint)
+    set(gcf,'Renderer','Painters'); 
+    drawnow; print('-depsc','step_eddy'); 
+    set(gcf,'Renderer','opengl'); 
+end
+
+
+
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
 y1=min(imag(w)); y2=max(imag(w)); dy=y2-y1;
@@ -82,22 +97,48 @@ tic;
 tval=toc*1E3/nnz(ib);
 pp(zz==0)=-5;
 
-
+nc=10;
+cs=[linspace(stol,max(real(psi(:))),nc)';cs1(abs(cs1)>stol)]; tc=1E-3;
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
-cs=[linspace(0.9*min(real(psi(:))),0,4),linspace(0,max(real(psi(:))),nc)];
-figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+
+figure(1); clf;
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
-contour(real(zz),imag(zz),real(psi),cs(cs>=0),'k',lw,2); hold on;
-contour(real(zz),imag(zz),real(psi),cs(cs<=0),'y',lw,2); hold on;
-plot(w([1:end,1]),'-k',lw,2);
+contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
+contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
+%plot(w([1:end,1]),'-k',lw,2);
 colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
 hold off; grid off; axis equal; 
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-if(ifprint), print('-depsc','step_soln'); end
+%cf=colorbar(); cf.TickLabelInterpreter='latex';
+
+if(ifprint)
+    set(gcf,'Renderer','Painters'); 
+    drawnow; print('-depsc','step'); 
+    set(gcf,'Renderer','opengl'); 
+end
 
 
-figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+figure(3);
+semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
+axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
+text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
+text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
+
+if(ifprint)
+    set(gcf,'Renderer','Painters'); 
+    drawnow; print('-depsc','step_conv'); 
+    set(gcf,'Renderer','opengl'); 
+end
+
+
+return
+
+
+
+figure(4); clf;
 surf(real(zz),imag(zz),real(pp)); hold on;
 hold off; grid off; axis off;
 xlim([-L1,L2]); ylim([-H1,H2]); 
@@ -108,30 +149,11 @@ daspect([1,1,abs(diff(real(pref)))]); caxis(sort(real(pref))); zlim([-5,16])
 colormap(jet(256)); %shading interp;
 cb=colorbar(); cb.TickLabelInterpreter='latex';
 title('Pressure');
-%if(ifprint), print('-depsc','step_pres'); end
 
-figure(3); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-subplot(1,2,2); plot(w([1:end,1]),'-k'); hold on;
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10);
-hold off; axis equal; axis square;
-
-subplot(1,2,1); 
-semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
-axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
-text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
-text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
-if(ifprint), print('-depsc','step_conv'); end
-
-
-L=0.5; wedge=[1i*L; 0; L]-1i;
-figure(4); clf; eddy_hunter(ufun,wedge,2,256);
-
-return
-figure(4);
-for k=1:numel(w)
-    plot(r(id==k)); hold on;
+if(ifprint)
+    set(gcf,'Renderer','Painters'); 
+    drawnow; print('-depsc','step_pres'); 
+    set(gcf,'Renderer','opengl'); 
 end
-hold off; legend(num2str((1:numel(w))'));
+
 end

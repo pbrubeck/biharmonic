@@ -1,0 +1,38 @@
+%\documentclass[12pt,aps,pra,showkeys,nofootinbib,notitlepage,groupedaddress]{revtex4-1}
+\documentclass{article}
+\usepackage{header}
+
+\begin{document}
+
+\makeatletter
+\title{Lightning Stokes Solver}
+\author{Pablo Brubeck \and Nick Trefethen}
+\date{\today}
+\makeatother
+
+\maketitle
+
+\begin{abstract}
+Gopal and Trefethen have recently introduced ``lightning solvers''
+for the 2D Laplace and Helmholtz equations, based on rational
+functions with poles exponentially clustered near singular corners.
+Making use of the Goursat representation in terms of analytic
+functions, we extend these methods to the biharmonic equation,
+specifically to 2D Stokes flow.  Flows in bounded, unbounded, and
+multiply connected domains are considered, with solutions computed
+to ten digits of accuracy in a few seconds of laptop time.  As an
+illustration of the high accuracy, we readily resolve two or three
+counter-rotating Moffatt eddies near a singular corner.
+\end{abstract}
+
+\linespread{1}
+\input{intro}
+\input{goursat}
+\input{physics}
+\input{method}
+\input{results}
+\input{conclusion}
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

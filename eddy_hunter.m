@@ -1,61 +1,101 @@
-function [] = eddy_hunter(ufun,w,ne,nplt,nc)
+function [cs] = eddy_hunter(ufun,w,ne,nplt,nc,stol)
 % EDDY_HUNTER plot Moffatt eddies
 if(nargin<3), ne=0; end
 if(nargin<4), nplt=64; end
 if(nargin<5), nc=4; end
+if(nargin<6), stol=1E-11; end
 
 va='VerticalAlignment';
 ha='HorizontalAlignment';
 
 dw=w([1,3])-w(2);
 un=mean(dw./abs(dw));
+%un=un/abs(un);
 tha=angle(un);
 R=mean(abs(dw)); 
 a=R*un;
 
 
-f0=real(ufun(w(2)));
-f=@(t) real(ufun(w(2)+a*t)-f0);
-cf=chebfun(f,[0,1],'splitting','on');
-
-
-x0=[roots(cf);1];
-xe=roots(diff(cf));
-ne=min(ne,length(x0)-1);
+f0=real(ufun(w(2))); %f0=0;
+cf=chebfun(@(x) real(ufun(w(2)+a*x)-f0), [0,1], 64); % low frequency
+[fe,re]=minandmax(cf,'local');
+[ct,kk]=sort(abs(fe));
+kk=kk(ct>stol);
+if(isempty(kk))
+    disp('Could not find an eddy!');
+    return
+end
+rmin=re(max(kk(1)-1,1));
+%fe=fe(re>=rmin); re=re(re>=rmin);
+rz=roots(cf);
+rz=rz(rz>=rmin);
 if(ne>0)
-    x0=x0(max(1,end-ne-1):end); 
+    rz=rz(end-ne+1:end);
+end
+rz=[0;rz];
+% ensure one extrema between each root
+rk=zeros(length(rz)-1,1);
+for j=1:length(rz)-1
+    rj=re(re>=rz(j)&re<=rz(j+1));
+    if(~isempty(rj))
+        [~,k]=max(abs(cf(rj)));
+        rk(j)=rj(k);
+    else
+        rk(j)=mean(rz(j:j+1));
+    end
+end
+re=rk; fe=cf(re);  
+% ensure plot for the whole wedge
+if(rz(end)<0.8)
+    rz=[rz;1]; 
+else
+    rz(end)=1;
 end
 
-tol=0;
-%x0=x0(x0>tol);
-%xe=xe(xe>tol);
+fe=fe(:)+f0;
+fe=real(ufun(w(2)+a*re(:)));
+cs=fe(:)*linspace(0.05,0.95,nc);
 
-t=linspace(0,1,nplt);
-r=R*(diff(x0)*t+x0(1:end-1)*(1+0*t));
-r=reshape(r',1,[]);
+%plot(cf,'b'); hold on; plot(rz,rz*0,'.r'); plot(re,cf(re),'.b'); hold off; return
 
 
+r=R*(diff(rz(:))*linspace(0,1,nplt)+rz(1:end-1))';
 da=angle(dw(1)./dw(2))/2;
-th=linspace(tha-da,tha+da,nplt);
-zz=w(2)+r(:)*exp(1i*th);
-
-tol=1E-15;
-q=linspace(0.05,0.9,nc);
-fe=f(xe); 
-%be=abs(fe)>tol; xe=xe(be); fe=fe(be);
-cs=f0+fe*q;
-cs=[cs(:);f0];
+%th=linspace(tha-da,tha+da,2*nplt+1);
+th=tha+da*chebpts(2*nplt+1)';
+%th=tha+da*tanh(linspace(-5,5,2*nplt+1));
 
 
-psi=ufun(zz); 
-contour(real(zz),imag(zz),real(psi),cs,'k'); hold on;
-if(ne==0), ne=length(xe); end
-for e=1:ne
-    ze=w(2)+a*xe(end-e+1);
+% Plot the eddy one by one
+zz=w(2)+exp(1i*th(:))*r(:)';
+zz=reshape(zz,length(th),[],numel(rz)-1);
+psi=real(ufun(zz));
+for e=1:size(cs,1)
+    cse=cs(e,:); 
+    cse=cse(abs(cse)>stol); 
+    cse=cse(:); 
+    ee = 1:e;
+    ze=reshape(zz(:,:,ee),size(zz,1),[]);
+    psie=reshape(psi(:,:,ee),size(psi,1),[]);
+    %[min(abs(ze-w(2)),[],'all'),max(abs(ze-w(2)),[],'all'),max(abs(cse))]
+    if(length(cse)>1)
+        contour(real(ze),imag(ze),psie,cse,'k'); hold on;
+    end
+end
+
+% Plot the zero contour
+cse=[f0,f0];
+ee = 2:size(cs,1);
+ze=reshape(zz(:,:,ee),size(zz,1),[]);
+psie=reshape(psi(:,:,ee),size(psi,1),[]);
+contour(real(ze),imag(ze),psie,cse,'k'); hold on;
+
+% Add a label
+if(ne==0), ne=nnz(abs(fe)>stol); end
+for e=1:1
+    ze=w(2)+a*re(end-e+1);
     text(real(ze),imag(ze),sprintf('%1.1E',fe(end-e+1)),ha,'center',va,'middle');
 end
-plot(w,'k'); hold off;
-axis equal;
-
-
+plot(w,'k'); 
+hold off; axis equal;
 end

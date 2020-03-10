@@ -1,0 +1,52 @@
+\ProvidesPackage{header}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[numbered,framed]{mcode}
+\usepackage{amsthm, amsmath, amssymb, gensymb, physics, upgreek, siunitx}
+\usepackage{graphicx, epstopdf, float, hyperref}
+\usepackage[caption=false]{subfig}
+\usepackage[version=4]{mhchem}
+\usepackage{enumitem,verbatim}
+\usepackage{matlabmatrix}
+
+
+\usepackage[ruled,vlined]{algorithm2e}
+
+\graphicspath{{../}}
+\epstopdfsetup{outdir=./}
+
+% Classic symbols
+\newcommand{\me}{\mathrm{e}}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\sinc}{sinc}
+%\renewcommand{\qedsymbol}{Q.E.D.}
+\newcommand{\bigo}[1]{\mathcal{O}\left(#1\right)}
+
+% Set theory
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\integers}{\mathbb{Z}}
+
+% Vector notation
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\newcommand{\uvec}[1]{\mathbf{\hat{#1}}}
+\newcommand{\transp}{\text{T}}
+\newcommand{\adj}[1]{#1^\dagger}
+
+\newcommand{\ux}{\underline{x}}
+\newcommand{\ub}{\underline{b}}
+\newcommand{\uf}{\underline{f}}
+\newcommand{\ug}{\underline{g}}
+
+\newcommand{\conj}[1]{{\overline{#1}}}
+\newcommand{\imag}[1]{{\Im\left\{#1\right\}}}
+\renewcommand{\real}[1]{{\Re\left\{#1\right\}}}
+
+% Differential operators
+\renewcommand{\div}{\nabla\cdot}
+\newcommand{\lap}{\nabla^2}
+
+\DeclareMathOperator{\diag}{diag}
+
+%\def\andname{y}

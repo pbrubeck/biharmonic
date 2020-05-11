@@ -2,19 +2,31 @@
 
 \section{Introduction}
 
-In this paper we consider numerical solutions to the biharmonic BVP
-\begin{equation} \label{eq:bvp}
-\nabla^4 \psi = 0, \quad \text{in }\Omega,
+In this paper we consider numerical solutions to the biharmonic equation in a two-dimesnional domain $\Omega\subseteq\reals^2$,
+\begin{equation} \label{eq:bih}
+\nabla^4 \psi = \nabla^2 \left(\nabla^2 \psi\right) = \psi_{xxxx} +2\psi_{xxyy} +\psi_{yyyy} = 0,
 \end{equation}
-with appropriate boundary conditions on $\partial\Omega$, imposed on $\psi$ (Dirichlet) or its derivatives (Neumann).
+coupled with appropriate boundary conditions. Since the equation is of fourth order, to ensure
+well-posedness, we impose two boundary conditions at each point of $\partial\Omega$. We specify the value of
+the function itself and one component of the gradient on a portion $\Gamma_1$ of $\partial\Omega$, and both components
+of the gradient on the complementary part $\Gamma_2$ ,
+\begin{subequations}\label{eq:bcs}
+\begin{equation}
+\psi = h(x,y), \quad \uvec{a}\cdot \nabla\psi = k(x,y)\quad \text{on }\Gamma_1,\\
+\end{equation}
+\begin{equation}
+\nabla \psi = \vec{g}(x,y) \quad\text{on }\Gamma_2,
+\end{equation}
+\end{subequations}
+where $\uvec{a}\in\reals^2$ is a fixed unit vector, with $\partial\Omega = \Gamma_1 \cup \Gamma_2$ and $\Gamma_1\cap\Gamma_2 = \emptyset$. Functions that satisfy \eqref{eq:bih} are called biharmonic and are smooth in the interior of $\Omega$, although point-singularities may arise on the boundary when $\partial\Omega$ contains corners or when the boundary data $h$, $k$, $\vec{g}$ have singularities, or at points of juncture between $\Gamma_1$ and $\Gamma_2$.
+
+In this paper, we propose a numerical method to solve \eqref{eq:bih} by generalizing the recently introduced ``lightning solvers'' for the 2D Laplace and Helmholtz equations \cite{Gopal19,Gopal19new}. The main advantage of this class of methods is that they can handle very general singularities in very general domains with corners, without requiring any detailed analysis, and still achieve high accuracy.
+
+This work is structured as follows. In Section \ref{sec:goursat}, we describe the Goursat representation, which allows one to write any solution to \eqref{eq:bih} in terms of two analytic functions when $\Omega$ is simply connected. These two functions can then be approximated by rational functions \cite{newman}.
+The biharmonic equation is most commonly found in applications in Stokes flow and linear elasticity. In Section \ref{sec:physics}, we review how the incompressible Stokes equations can be represented
+via the stream function, which is biharmonic. For linear elasticity problems, one transforms the governing equations into a biharmonic equation involving the Airy stress function, but problems
+of elasticity are not explored in this paper.
 
 
-Finding solutions to Stokes flow presents challenges in spite of the fact that the equations involved are linear. In most common applications, one encounters geometries with corners, and discontinuous boundary conditions, which result in point singularities in the solution. 
-
-
-\endinput
-\begin{itemize}
-\item Discuss regularity in the physical variables $u,v,p,\omega,\psi$. 
-\item We have harmonic functions $p,\omega$, which belong to $H^0(\Omega)$
-\item We also have biharmonic functions $\psi,u,v$, which belong to $H^2(\Omega)$
-\end{itemize}
+Our method consists of approximating both Goursat functions by rational functions and finding coefficients that best satisfy the boundary conditions \eqref{eq:bcs} in the least-squares sense. A detailed description of the method, along with implementation details, is given in Section \ref{sec:method}, and numerical results are presented in Section \ref{sec:results}. The method gets high accuracy for simple geometries with great speed, and we illustrate this by showing its ability to easily resolve two or more Moffatt eddies in corners. In Section \ref{sec:unbounded}, we show how to extend the method to unbounded domains directly without the need for artificial boundaries. Section  \ref{sec:multiply} presents an extension to multiply connected regions by the inclusion of additional logarithmic terms. Finally, we give our
+conclusions in Section \ref{sec:conclusion}.

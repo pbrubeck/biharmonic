@@ -73,12 +73,10 @@ L=0.03; wedge=[1i*L; 0; L]+w(6);
 subplot(1,2,2); eddy_hunter(ufun,wedge,ne,nplt,nce,stol); title('Second Eddy');
 
 if(ifprint)
-    set(gcf,'Renderer','Painters'); 
+    set(gcf,'render','painters');
     drawnow; print('-depsc','step_eddy'); 
-    set(gcf,'Renderer','opengl'); 
+    set(gcf,'render','opengl');    
 end
-
-
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -101,36 +99,40 @@ nc=10;
 cs=[linspace(stol,max(real(psi(:))),nc)';cs1(abs(cs1)>stol)]; tc=1E-3;
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
 
-figure(1); clf;
-pcolor(real(zz),imag(zz),abs(uu)); hold on;
+figure(1); clf; 
+pcolor(real(zz),imag(zz),abs(uu));  hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
 colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
+plot(real(pol),imag(pol),'.r',ms,10);
 hold off; grid off; axis equal; 
 %cf=colorbar(); cf.TickLabelInterpreter='latex';
 
+xlim([-1.5, 5.5]);
+ylim([-1.5, 1.5]);
+
 if(ifprint)
-    set(gcf,'Renderer','Painters'); 
+    set(gcf,'render','painters');
     drawnow; print('-depsc','step'); 
-    set(gcf,'Renderer','opengl'); 
+    set(gcf,'render','opengl');    
 end
 
 
 figure(3);
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
 
 if(ifprint)
-    set(gcf,'Renderer','Painters'); 
+    set(gcf,'render','painters');
     drawnow; print('-depsc','step_conv'); 
-    set(gcf,'Renderer','opengl'); 
+    set(gcf,'render','opengl');    
 end
 
 

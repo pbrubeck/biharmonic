@@ -40,10 +40,10 @@ for k=kmin:kmax
     bcdata(top)=v1;
     bcdata(bot)=v2;
     
-    %mass(:)=1;
+    %mass(id>2)=1;
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
-    
+
     ri=full(sparse([id;id],ones(size(r)),r.^2,numel(w),1));
     kk=adapt_hist(ri);
     npol(kk)=npol(kk)+ceil(sqrt(npol(kk)));
@@ -79,6 +79,7 @@ tc=1E-3;
 
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
 figure(1); clf;
+
 subplot(1,2,1);
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
@@ -86,14 +87,17 @@ contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
 colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
+
+plot(real(pol),imag(pol),'.r',ms,10); 
 hold off; grid off; axis equal; 
+xlim([-1.5,1.5]); ylim([-1.5,1.5]);
 %cf=colorbar(); cf.TickLabelInterpreter='latex';
 
 
 subplot(1,2,2); 
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);

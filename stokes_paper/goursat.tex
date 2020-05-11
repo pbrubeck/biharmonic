@@ -1,32 +1,38 @@
 %!TEX root = stokes_paper.tex
 \newtheorem{theorem}{Theorem}
 
-\section{Biharmonic functions in simply-connected domains}
+\section{Biharmonic functions in simply-connected domains \label{sec:goursat}}
+
+The Goursat representation is the key ingredient required to extend the lightning solver to biharmonic problems, going back to the French mathematician Goursat in 1898 \cite{goursat}. It allows one to represent biharmonic functions in terms of two analytic functions, which our algorithms will then approximate by rational functions. In line with the use of analytic functions, and throughout the rest of the paper, we represent $x$ and $y$ via the complex variable $z = x + iy$. We include a precise statement of the Goursat representation in the form of a theorem, along with two proofs, which we consider to be valuable in giving two perspectives on what is going on. The original proof was given by Goursat in \cite{goursat}, and an alternative proof is given by Muskhelishvili in \cite{mus19}. Both of these are also found in textbooks such as \cite{ockendon95} and \cite{mus77}. Although we label them ``proofs'', we don’t give these arguments in full detail. For a rigorous discussion, see [\textbf{Find a reference for this}].
+
 
 \begin{theorem}[Goursat representation]
 \label{th:goursat}
-Let $\Omega\subseteq\mathbb{C}$ be a simply-connected open region, and let $\psi : \Omega \to \reals$ be a biharmonic function. That is,
-\begin{equation}\label{eq:bih}
-\nabla^4 \psi = \nabla^2 \left(\nabla^2 \psi\right) = \psi_{xxxx} +2 \psi_{xxyy} + \psi_{yyyy}= 0 \quad \text{in } \Omega.
-\end{equation}
-Then one can represent $\psi$ in terms of functions $f(z)$ and $g(z)$ analytic in $\Omega$ in what is known as the Goursat representation,
+Let $\Omega\subseteq\mathbb{C}$ be a simply-connected open region, and let
+$\psi : \Omega \rightarrow \reals$ be a biharmonic function. Then $\psi$ can be represented in terms of functions $f(z)$ and $g(z)$ analytic in $\Omega$ by the formula
 \begin{equation}\label{eq:goursat}
 \psi(x,y) = \psi(z,\conj{z}) = \Im \left\{ \conj{z}f(z) + g(z)\right\}.
 \end{equation}
 The functions $f(z)$ and $g(z)$ are uniquely defined up to addition of arbitrary terms $\lambda z+C$ to $f(z)$ and $\conj{C}z+\alpha$ to $g(z)$, where $\lambda,\alpha\in\reals$ and $C\in\mathbb{C}$.
 \end{theorem}
-The use of the imaginary as opposed to the real part is merely to simplify the expressions for physical quantities associated with $\psi$. Series expansions based on \eqref{eq:goursat} have been used to find numerical solutions to BVPs associated with \eqref{eq:bih} by Gaskell et al. in \cite{Gaskell98}, Finn, Cox and Byrne in \cite{FinnCoxByrne03}, and by Luca and Crowdy in \cite{Luca18}, among many others. The first proof to Theorem \ref{th:goursat} was given by Goursat in \cite{Gou98}, and an alternative proof is given by Muskhelishvili in \cite{Mus19}, which is also found in textbooks such as \cite{ckp66} and \cite{Mus77}.
+
+The use of the imaginary as opposed to the real part is standard in the literature and helps
+to simplify the expressions for physical quantities associated with $\psi$. Series expansions based on
+\eqref{eq:goursat} have been used to find numerical solutions to BVPs associated with \eqref{eq:bih} by Gaskell et al. in
+\cite{gaskell}, Finn, Cox and Byrne in \cite{finn}, and by Luca and Crowdy in \cite{luca18}, among many others. Though
+the Goursat representation has been used by various people over the years, it is used far less than more general tools such as FEM and integral equations and indeed is surprisingly hard to find in textbooks.
+
 
 \begin{proof}[Goursat's proof \cite{Gou98}]
-First, we use the well-known property that $\psi$ is analytic in $\Omega$ with respect to the real variables $x,y$, and note that the biharmonic operator can be written in terms of Wirtinger derivatives,
+First, we note that the biharmonic operator can be written in terms of Wirtinger derivatives,
 \begin{equation}
 \nabla^4 \psi = 16\frac{\partial^4 \psi}{\partial\conj{z}^2 \partial z^2}.
 \end{equation}
-Treating $z$ and $\conj{z}$ as independent variables, one can solve this by separation of variables. Since $\psi$ is analytic, we may plug in the ansatz $\psi_k = A_k(z)B_k(\conj{z})$, obtaining
+Treating $z$ and $\conj{z}$ as independent variables, one can solve this equation by separation of variables. Under the assumption that $\psi$ is analytic with respect to te real variables $x$ and $y$, we may plug in the ansatz $\psi=\sum_k \psi_k$, where $\psi_k= A_k(z)B_k(\conj{z})$, obtaining
 \begin{equation}
 \frac{\partial^4 \psi_k}{\partial\conj{z}^2 \partial z^2} = A_k''(z) B_k''(\conj{z}) = 0,
 \end{equation} 
-which implies that either $A_k''(z)=0$ or $B_k''(\conj{z})=0$. The solution spaces for these two subproblems are spanned by $\{1,z\}$ for $A_k''(z)=0$  and $\{1,\conj{z}\}$ for $B_k''(\conj{z})=0$. Therefore, without loss of generality, the solution is given by superposition of the four independent solutions
+which implies that either $A_k''(z)=0$ or $B_k''(\conj{z})=0$. The solution spaces for these two cases are spanned by $\{1,z\}$ for $A_k''(z)=0$  and $\{1,\conj{z}\}$ for $B_k''(\conj{z})=0$. Therefore, without loss of generality, by superposition of the four independent solutions,
 \begin{equation}
 \psi(z,\conj{z}) =  A_1(z) + \conj{z} A_2(z) + B_3(\conj{z}) + z B_4(\conj{z}),
 \end{equation}
@@ -44,30 +50,29 @@ If $\omega=-\nabla^2 \psi$, then $-\nabla^2\omega = \nabla^4\psi = 0$. Now defin
 \frac{\partial\omega}{\partial x} = \frac{\partial p}{\partial y}, \quad
 \frac{\partial\omega}{\partial y} = -\frac{\partial p}{\partial x};
 \end{equation}
-this function is determined up to an arbitrary constant term, $p_0\in\reals$. Then the expression
+this function is determined up to an arbitrary constant, $p_0\in\reals$. Then the expression
 \begin{equation}
 h(z) = p(x,y)-i\omega(x,y)
 \end{equation}
-represents a function of the complex variable $z=x+iy$, analytic in $\Omega$. Furthermore, put
+represents a function of the complex variable $z=x+iy$, analytic in $\Omega$. Put
 \begin{equation}
 f(z) := \frac{1}{4} \int_a^z h(w) dw = f_1 + if_2,
 \end{equation}
-where $a\in\Omega$ is arbitrary, causing $f(z)$ to be defined up to a term $\lambda z +C$ where $4\lambda=p_0$ and $C\in\mathbb{C}$.
-Obviously,
+where $a\in\Omega$ is arbitrary, causing $f(z)$ to be defined up to a term $\lambda z +C$ where $4\lambda=p_0$ and $C\in\mathbb{C}$. Obviously,
 \begin{equation}\label{eq:fprime}
 f'(z) = \frac{\partial f_1}{\partial x} + i \frac{\partial f_2}{\partial x} = -i \frac{\partial f_1}{\partial y} + \frac{\partial f_2}{\partial y} = \frac{1}{4} \left(p-i\omega\right),
 \end{equation}
-and from the imaginary part of \eqref{eq:fprime}, we may write
+from which, we calculate, using the fact that $\nabla^2 f_1=\nabla^2 f_2=0$,
 \begin{equation}
 \nabla^2\left(y f_1\right) = 2\frac{\partial f_1}{\partial y} = \frac{\omega}{2},\quad \nabla^2\left(x f_2\right) = 2\frac{\partial f_2}{\partial x} = -\frac{\omega}{2}.
 \end{equation}
-Thus, the function $\psi + yf_1 - xf_2$ is harmonic, i.e.
+Thus, the function $\psi + yf_1 - xf_2$ is harmonic, since
 \begin{equation}
 \nabla^2 \left(\psi + yf_1 - xf_2\right) = -\omega + \frac{\omega}{2} + \frac{\omega}{2} =0.
 \end{equation}
 Let this function be $\psi + yf_1 - xf_2 = \Im\left\{g(z)\right\}$, where $g(z)$ is analytic, and for the given $f(z)$, it will be defined up to a term $\conj{C}z+\alpha$, where $\alpha\in\reals$, since $\psi$ must not depend on the term $C\conj{z}$. Hence one can represent
 \begin{equation}
-\psi = \Im\left\{\conj{z}f(z) + g(z)\right\}.
+\psi = x f_2(z) -y f_1(z) + \Im\left\{g(z)\right\} = \Im\left\{\conj{z}f(z) + g(z)\right\}.
 \end{equation}
 This argument can be used to establish the analyticity of $\psi$.
 \end{proof}

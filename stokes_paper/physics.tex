@@ -1,8 +1,8 @@
 %!TEX root = stokes_paper.tex
 
-\section{Physical interpretation: Stokes flow}
-
-Let $\vec{u}=(u,v)^T$ be the velocity field of a steady incompressible 2D fluid flow, and let $p$ be the associated pressure field, which is defined up to a constant. In the limit $\text{Re}\to 0$ and in the absence of body forces, the steady-state equations for the conservation of momentum and the incompressibility constraint are given by
+\section{Application to Stokes flow \label{sec:physics}}
+The material of this section is presented merely to connect the biharmonic equation and the
+Goursat representation to the application context of Stokes flow. This approach is standard and can be found in textbooks such as \cite{ockendon}. Let $\vec{u}=(u,v)^T$ be the velocity field of a steady incompressible 2D fluid flow, and let $p$ be the associated pressure field, which is defined up to a constant. In the limit pf zero Resynolds number and in the absence of body forces, the steady-state equations for the conservation of momentum and the incompressibility constraint are given by
 \begin{subequations}\label{eq:stokes}
 \begin{align}
 -\nabla^2 \vec{u} + \nabla p &= 0,\label{eq:momen}\\
@@ -10,31 +10,34 @@ Let $\vec{u}=(u,v)^T$ be the velocity field of a steady incompressible 2D fluid 
 \end{align}
 \end{subequations}
 A common solution technique is to introduce the stream function $\psi$ by letting
-\begin{equation}
+\begin{equation}\label{eq:vel}
 u=\frac{\partial\psi}{\partial y}, \quad 
 v=-\frac{\partial\psi}{\partial x}.
 \end{equation}
 Then, it is easy to verify that \eqref{eq:incomp} is automatically satisfied. Now define the vorticity as
-\begin{equation}
+\begin{equation} \label{eq:poisson}
 \omega := \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y}  = -\nabla^2 \psi.
 \end{equation}
-Note that \eqref{eq:momen} takes the form of the Cauchy-Riemann conditions 
-\begin{equation}\label{eq:pomega}
--\nabla^2u=\frac{\partial\omega}{\partial y} = -\frac{\partial p}{\partial x} , \quad 
--\nabla^2v=-\frac{\partial\omega}{\partial x} = -\frac{\partial p}{\partial y},
+From \eqref{eq:momen} we have $-\nabla^2 u = -\partial p/\partial x$, and from \eqref{eq:vel} and \eqref{eq:poisson} we have $-\nabla^2 u =\partial\omega/\partial y$, implying 
+\begin{equation}
+\frac{\partial \omega}{\partial y} = -\frac{\partial p}{\partial x}.
 \end{equation}
-which directly imply that $p$ and $\omega$ are harmonic conjugates. Therefore, the stream function-vorticity formulation
+Similarly, $-\nabla^2 v=-\partial p/\partial y$ and $-\nabla^2 v =\partial \omega/\partial x$, giving
+\begin{equation}
+\frac{\partial\omega}{\partial x}=\frac{\partial p}{\partial y}.
+\end{equation}
+These are the Cauchy-Riemann equations for $\omega$ and $p$ as functions of $x$ and $y$, implying that $\omega$ and $p$ are harmonic conjugates. Therefore, the systems of equations \eqref{eq:stokes} is equivalent to the stream function-vorticity formulation
 \begin{subequations}
 \begin{align}
--\nabla^2\psi &= \omega,\label{eq:psi}\\
--\nabla^2\omega &= 0,\label{eq:omega}
+-\nabla^2\psi &= \omega,\\
+-\nabla^2\omega &= 0.\label{eq:laplace}
 \end{align}
 \end{subequations}
-is equivalent to the system of equations \eqref{eq:stokes}. Moreover, one can take the Laplacian on both sides of \eqref{eq:psi} and use \eqref{eq:omega} to reveal that $\psi$ is biharmonic. Thus we have reduced the original system of three equations in three unknowns to a biharmonic equation. By Theorem \ref{th:goursat}, one can write
+Moreover, combining these equations shows that $\psi$ is biharmonic, $\nabla^4 \psi=0$. Note that we have eliminated the pressure from the problem, reducing the original system of three equations in three unknowns to a biharmonic equation. By Theorem \ref{th:goursat}, one can write
 \begin{equation}
 \psi = \frac{1}{2i} \left[g(z) - \conj{g(z)} + \conj{z}f(z) - z\conj{f(z)}\right].
 \end{equation}
-so that the velocity components are given in terms of $f(z)$ and $g(z)$,
+for some analytic functions $f(z)$ and $g(z)$, whereupon the velocity components become
 \begin{equation}
 u-iv = 2i\frac{\partial \psi}{\partial z} = g'(z) + \conj{z} f'(z) - \conj{f(z)}.
 \end{equation}
@@ -42,41 +45,19 @@ Since $\psi$ is invariant under the transformations of Theorem \ref{th:goursat},
 \begin{equation}
 -\omega = \nabla^2 \psi =4\frac{\partial^2\psi}{\partial \conj{z}\partial z} = -2i \left( f'(z) - \conj{f'(z)}\right) = 4\Im\left\{f'(z)\right\},
 \end{equation}
-and from \eqref{eq:pomega} we deduce that
+and from \eqref{eq:laplace} we deduce that
 \begin{equation}
 p-i\omega = 4 f'(z).
 \end{equation}
-Since the pressure is uniquely defined up to a constant, we can relate this freedom to a pressure shift of $p_0=4\lambda$. 
+Since the pressure is uniquely defined up to a constant, we can relate this freedom to a pressure shift of $p_0$. 
 
-
-Let us further introduce the Airy stress function $A$, which we will define as the biharmonic conjugate of $-2\psi$, implying that $-2(p-i\omega) = \nabla^2 (A-2i\psi)$
-
-
-a potential for the stress tensor $\sigma_{ij} = u_{i,j} + u_{j,i} -p \delta_{ij}$,
+We now consider the simplest model problem, regarding the Stokes flow near a sharp corner of angle $2\alpha$ caused by (steadily) stirring the distant fluid. For ease of interpretation, it is convenient to forget about the Goursat representation and switch to polar coordinates centered at the corner, i.e. $\Omega = \{z = re^{i\theta} : r > 0, -\alpha \leq \theta \leq \alpha \}$ . Intuitively, if the stirring pushes the fluid from one edge to the other, the flow must rotate near the corner, as it will be deflected by the edges. On the other hand, a stirring that pushes the fluid towards the corner will cause the flow to split and rotate in either direction near corner. The later situation is commonly referred as symmetric flow, while the former is known as anti-symmetric flow. The asymptotic solution as $r\to 0$ for the anti-symmetric flow inside the wedge caused by a perturbation at infinity was rederived by Moffatt in \cite{moffatt},
 \begin{equation}
-\matlabmatrix{\sigma_{11} \sigma_{12}; \sigma_{21} \sigma_{22}} = 
-\matlabmatrix{A_{yy} -A_{xy}; -A_{yx} A_{xx}}.
-\end{equation}
-Since only second derivatives of $A$ have a physical interpretation, $A$ is uniquely defined up to a linear term. We can connect the three corresponding degrees of freedom with those on the arbitrariness on the Goursat representation, defined as the biharmonic conjugate of $\psi$,
-\begin{equation}\label{eq:stress}
--\frac{A}{2}+i\psi := \conj{z}f(z) + g(z).
-\end{equation}
-We note that \eqref{eq:stress} can be transformed into
-\begin{equation}
--\frac{A}{2}+i\psi = \conj{z}f(z) + g(z) + \left(\lambda \conj{z}z + C\conj{z} + \conj{C}z + \alpha \right), 
-\end{equation}
-without changing the physical description of the fluid. From the terms in parenthesis, we observe that only $\lambda \conj{z}z$ has an effect on the stress tensor, namely the pressure shift. The rest of these terms are of the form $c_1 x+c_2 y+\alpha$ which coincides with the arbitrariness in the definition of $A$, and correspond to rigid-body displacements.
-
-
-\subsection{Moffatt eddies}
-
-The asymptotic solution ($r \ll r_0$) for the anti-symmetric flow inside a wedge of angle $2\alpha$ caused by a perturbation at infinity was studied by Moffat in \cite{Moffatt64},
-\begin{equation}
-\psi_\lambda(r,\theta) \sim \Re\left\{\left(\frac{r}{r_0}\right)^\lambda \left[\cos{(\lambda\alpha)}\cos{\left((\lambda-2)\theta\right)}+\cos{\left((\lambda-2)\alpha\right)}\cos{(\lambda\theta)}\right]\right\},
+\psi_\lambda(r,\theta) \sim \Re\left\{r^\lambda \left[\cos{(\lambda\alpha)}\cos{\left((\lambda-2)\theta\right)}+\cos{\left((\lambda-2)\alpha\right)}\cos{(\lambda\theta)}\right]\right\},
 \end{equation}
 where, in order to satisfy the no-slip conditions $\psi_\lambda=\uvec{n}\cdot\nabla\psi_\lambda=0$ at $\theta=\pm\alpha$, the parameter $\lambda$ must be a root of
 \begin{equation}\label{eq:roots}
 \sin{\left(2\alpha(\lambda-1)\right)} + (\lambda-1)\sin{(2\alpha)}=0.
 \end{equation}
-If $2\alpha>146^\circ$, the non-trivial roots of \eqref{eq:roots} are complex, $\lambda=p + iq$, which means that $\psi_\lambda$ presents radial oscillations (periodic in $\log(r)$) of decaying amplitude at a rate of $r^{p}$, which is manifested as a sequence of counter-rotating vortices, commonly known as Moffat eddies.
+If $2\alpha>146^\circ$, the non-trivial roots of \eqref{eq:roots} are complex, $\lambda-1=a + ib$, which means that $\psi_\lambda$ presents radial oscillations (periodic in $\log(r)$) of decaying amplitude at the rate  $r^{1+a}$. The solution is self-similar and takes the form a sequence of counter-rotating vortices, commonly known as Moffat eddies. Unless $a$ is an integer, $\psi$ has a singularity at the corner.
 

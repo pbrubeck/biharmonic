@@ -126,26 +126,29 @@ end
 A=W*A;
 r=W*b;
 
-%ifp0=false; %ifp0=true;
+ifp0=false; 
+% ifp0=true;
 nsp=0; GB=0;
 if(ifp0)
-    w0=w(end); % Some arbitrary point
+    w0=-10; % Some arbitrary point
     [~,i]=min(abs(z(:)-w0));
     nsp=5-any(bctype==0);
+    
+    nsp=1;
     C=zeros(nsp,size(A,2));
     
     G1=R0(i,:);  F1=z(i)'*R0(i,:); % set psi(w0)=0
     C(end,:)=[imag(G1),real(G1),imag(F1),real(F1), imag(L0(i,:))];
     
     F1=mass'*R1; G1=zeros(size(F1)); % set mean(p)=0
-    C(end-1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
-    
-    G1=R1(i,:);  F1=zeros(size(G1)); % set g'(w0)=0
-    C(1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
-    C(2,:)=[imag(G1), real(G1),imag(F1), real(F1), imag(L0(i,:))];
-    
-    G1=R0(i,:);  F1=zeros(size(G1)); % set real(g(w0))=0
-    C(3,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+    C(end,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+%     
+%     G1=R1(i,:);  F1=zeros(size(G1)); % set g'(w0)=0
+%     C(1,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
+%     C(2,:)=[imag(G1), real(G1),imag(F1), real(F1), imag(L0(i,:))];
+%     
+%     G1=R0(i,:);  F1=zeros(size(G1)); % set real(g(w0))=0
+%     C(3,:)=[real(G1),-imag(G1),real(F1),-imag(F1), imag(L0(i,:))];
 
     [GB,rd]=rref(C); % Choose pivots
     kd=setdiff(1:size(C,2),rd);

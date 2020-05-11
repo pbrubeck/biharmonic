@@ -16,7 +16,9 @@ R=mean(abs(dw));
 a=R*un;
 
 
-f0=real(ufun(w(2))); %f0=0;
+f0=real(ufun(w(2))); 
+f0
+%f0=0;
 cf=chebfun(@(x) real(ufun(w(2)+a*x)-f0), [0,1], 64); % low frequency
 [fe,re]=minandmax(cf,'local');
 [ct,kk]=sort(abs(fe));
@@ -52,10 +54,11 @@ else
     rz(end)=1;
 end
 
+
+
 fe=fe(:)+f0;
 fe=real(ufun(w(2)+a*re(:)));
 cs=fe(:)*linspace(0.05,0.95,nc);
-
 %plot(cf,'b'); hold on; plot(rz,rz*0,'.r'); plot(re,cf(re),'.b'); hold off; return
 
 
@@ -90,6 +93,8 @@ ze=reshape(zz(:,:,ee),size(zz,1),[]);
 psie=reshape(psi(:,:,ee),size(psi,1),[]);
 contour(real(ze),imag(ze),psie,cse,'k'); hold on;
 
+
+
 % Add a label
 if(ne==0), ne=nnz(abs(fe)>stol); end
 for e=1:1
@@ -98,4 +103,11 @@ for e=1:1
 end
 plot(w,'k'); 
 hold off; axis equal;
+
+xt=xticks();
+xl=xlim();
+yl=ylim();
+z = (xt-xl(1))/(xl(2)-xl(1));
+yt=(yl(2)-yl(1))*z + yl(1);
+yticks(yt);
 end

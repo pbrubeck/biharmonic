@@ -1,71 +1,70 @@
 %!TEX root = stokes_paper.tex
 
-\section{Method and Algorithm}
+\section{Numerical Method \label{sec:method}}
+In this section we describe the lightning Stokes solver that solves \eqref{eq:bih} when $\Omega$ is a curved polygon with $K$ corners $\{w_k\}_{k=1}^K$. The method consists of the rational approximation of the two analytic functions $f(z)$ and $g(z)$ that appear in the Goursat representation. We choose $N$ basis functions $\{\psi_j(z)\}_{j=1}^N$ with fixed poles, and we determine the coefficients by approximately solving a linear least-squares problem in $M$ sample boundary points $\{z_i\}_{i=1}^M \subset \partial\Omega$. We increase $N$ adaptively until the residual is below a certain tolerance or the refinement does not bring any improvement. Our implementation is based on the publicly available code $\texttt{laplace.m}$ \cite{tref20}, currently in version 6, and it provides a benchmark of practical implementation and speed of the algorithm.
+
 
 \subsection{Rational functions}
-Following Gopal and Trefethen \cite{Gopal19}, we use rational functions to approximate the analytic functions in the Goursat representation, which warranties a biharmonic function, hence we only need to find the coefficients that best fit the boundary conditions, we do this via least-squares.
+Following \cite{Gopal19}, we use rational functions to approximate the analytic functions appearing in the
+Goursat representation, which guarantees a biharmonic function. We find the coefficients that
+best fit the boundary conditions in the least-squares sense. We write
 \begin{equation}
 f(z) = \sum_{k=1}^N f_j \phi_j(z), \quad g(z) = \sum_{k=1}^N g_j \phi_j(z),
 \end{equation}
-where 
+where $f_j, g_j\in \mathbb{C}$ add up to $4N$ real degrees of freedom, and correspond to the expansion coeffi- cients with respect to the basis functions
 \begin{equation}
-\left\{\phi_j(z)\right\}_{j=1}^{N} = \left\{p_k(z)\right\}_{k=0}^{N_1} \cup \left\{\frac{1}{z/\beta_k-1}\right\}_{k=1}^{N_2}
+\left\{\phi_j(z)\right\}_{j=1}^{N} =  \bigcup_{k=1}^K\left\{\frac{1}{z-\beta_{kn}}\right\}_{n=1}^{N_k} \cup \left\{p_n(z)\right\}_{n=0}^{N_0}.
 \end{equation}
-where the $p_k(z)$ are the discretely-orthogonal ``Vandermonde with Arnoldi'' polynomials from \cite{Brubeck19}, which obey the $k+2$-term recurrence relation
+
+For the rational functions, we choose poles $\beta_{kn}$ clustered near the corners $w_k$, as described in \cite{gopal19},
 \begin{equation}
-H_{k,k+1} p_{k+1}(z) = z p_k(z) - \sum_{j=0}^k H_{j,k} p_j(z),\quad k=1,\ldots,N_1, \quad p_0(z)=1.
+\beta_{kn} = w_n + Le^{i\theta_k} e^{-\sigma (\sqrt{N_k}-\sqrt{n})}, \quad k=1,\ldots,K,\quad n=1,\ldots,N_k,
 \end{equation}
-with $H$ being the upper Hessenberg matrix from the Arnoldi iteration on the Krylov subspace $\mathcal{K}_{N_1}(\diag(z_i), e)$, where $e$ is the vector with all entries equal to 1. And the poles $\beta_k$ are clustered near the corners of $\Omega$, $\left\{w_n\right\}_{n=1}^P$, as described in \cite{Gopal19},
-\begin{equation}
-\beta_{k,n} = w_n + Le^{i\theta_n} e^{-\sigma (\sqrt{M_n}-\sqrt{k})}, \quad k=1,\ldots,M_n,\quad n=1,\ldots,P,
+where $\sigma=4$, $\theta_k$ is the angle formed between the real axis and the bisector at the corner $w_k$, and $L$ is a characteristic length scale associated with $\Omega$. For the polynomial basis functions, $p_n(z)$, we construct the  the discretely-orthogonal ``Vandermonde with Arnoldi'' polynomials from \cite{brubeck19}, which obey an $(n+2)$-term recurrence relation
+\begin{equation} \label{eq:arnoldi}
+H_{n,n+1} p_{n+1}(z) = z p_n(z) - \sum_{k=0}^n H_{n,k} p_k(z),\quad n=1,\ldots,N_0, \quad p_0(z)=1.
 \end{equation}
-where $\sigma=4$, $\theta_n$ is the angle formed between the real axis and the angle bisector at the corner $w_n$, and $L$ is some characteristic length scale associated with $\Omega$.
+Here $H$ being the upper-Hessenberg matrix from the Arnoldi iteration on the Krylov subspace $\mathcal{K}_{N_0}(\diag(z_i), e)$, where $e$ is the vector with all entries equal to 1. We ca differentiate \eqref{eq:arnoldi} to obtain a recurrence relation for $p_n'(z)$. This allows us to treat boundary conditions involving $f'(z)$ and $g'(z)$.
 
 
 
-
-
-
-
-
-
-\subsection{Matrix system}
-
-
-The enforcement of boundary conditions at the sample points $z_k$ is carried on by approximately solving by least-squares
+\subsection{Linear least-squares system}
+The two boundary conditions (2) are enforced on a set of $M > 2N$ sample points $\{z_i \}_{i=1}^M$, which
+are clustered near the corners similarly as $\beta_{kn}$, by approximately solving by least-squares
 \begin{equation} \label{eq:LS}
 A x\approx b,
 \end{equation}
-where $A\in\reals^{2M\times 4N}$, $x\in\reals^{4N}$ and $b\in\reals^{2M}$. If we partition the system into blocks, each associating the complex coefficients for a basis function $\phi_j(z)$ where the point $z_k$ where it or its derivative are evaluated, we obtain
+where $A\in\reals^{2M\times 4N}$, $x\in\reals^{4N}$ and $b\in\reals^{2M}$. If we partition the system into blocks, each associating the complex coefficients for a basis function $\phi_j(z)$ wth the point $z=z_i$ where it or its derivative is evaluated, we have
 \begin{equation}
 \matlabmatrix{A_{11} {\cdots} A_{1N}; {\vdots} {\ddots} {\vdots}; A_{M1} {\cdots} A_{MN}}
 \matlabmatrix{x_{1}; {\vdots}; x_{N}} \approx \matlabmatrix{b_{1}; {\vdots}; b_{M}},
 \end{equation}
-where $A_{kj}\in\reals^{2\times 4}$ are the blocks associated with the basis function $\phi_{j}(z)$ evaluated at $z=z_i$, $b_k\in\reals^2$ correspond to the RHS for the two BCs imposed at $z=z_k$, and $x_j\in\reals^4$ contain the 4 real DoFs of the complex coefficients of $\phi_j(z)$ in $f(z)$ and $g(z)$
+where $A_{ij}\in\reals^{2\times 4}$ are the blocks associated with the basis function $\phi_{j}(z)$ evaluated at $z=z_i$, $b_i\in\reals^2$ correspond to the RHS for the two BCs imposed at $z=z_i$, and $x_j\in\reals^4$ contain the 4 real degrees of freedom of the complex coefficients of $\phi_j(z)$ in $f(z)$ and $g(z)$,
 \begin{equation}
 x_ j = \matlabmatrix{\real{f_j} \imag{f_j} \real{g_j} \imag{g_j}}^\transp.
 \end{equation}
 
 
-
-For instance, a condition on both velocity components imposed at $z=z_k$ will correspond to two rows with RHS $b_k=(U(z_k), -V(z_k))^\transp$ and blocks
+For instance, a condition on both velocity components imposed at $z=z_i$ will correspond to two rows with right-hand side entries $b_i=(U(z_i), -V(z_i))^\transp$ and blocks
 \begin{equation}
-A_{kj}=\matlabmatrix{\real{\conj{z_k}\phi'_j(z_k)-\phi_j(z_k)} -\imag{\conj{z_k}\phi'_j(z_k)-\phi_j(z_k)} \real{\phi'_j(z_k)} -\imag{\phi'_j(z_k)}; 
-\imag{\conj{z_k}\phi'_j(z_k)+\phi_j(z_k)} \phantom{+}\real{\conj{z_k}\phi'_j(z_k)+\phi_j(z_k)} \imag{\phi'_j(z_k)} \phantom{+}\real{\phi'_j(z_k)}},
+\renewcommand*{\arraystretch}{1.5}
+A_{kj}=\matlabmatrix{\real{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} -\imag{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} \real{\phi'_j(z_i)} -\imag{\phi'_j(z_i)}; 
+\imag{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \phantom{+}\real{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \imag{\phi'_j(z_i)} \phantom{+}\real{\phi'_j(z_i)}},
 \end{equation}
 for $j=1,\ldots,N$. A no-slip condition can be implemented by providing a zero RHS.
 For a slip condition, one may also specify the velocity component tangential and set the stream function to some constant $C$ along the boundary. At the point $z=z_k$, this will correspond to two rows with RHS $b_k=(U_t(z_k),C)^\transp$ and blocks
 \begin{equation}
-A_{kj}=\matlabmatrix{\imag{F_{kj}} \real{F_{kj}} \imag{G_{kj}} \real{G_{kj}}; 
-\imag{\conj{z_k}\phi_j(z_k)} \real{\conj{z_k}\phi_j(z_k)} \imag{\phi_j(z_k)} \real{\phi_j(z_k)}},
+\renewcommand*{\arraystretch}{1.5}
+A_{ij}=\matlabmatrix{\imag{F_{ij}} \real{F_{ij}} \imag{G_{ij}} \real{G_{ij}}; 
+\imag{\conj{z_i}\phi_j(z_i)} \real{\conj{z_i}\phi_j(z_i)} \imag{\phi_j(z_i)} \real{\phi_j(z_i)}},
 \end{equation}
-for $j=1,\ldots,N$, where $F_{kj}=e^{i\alpha_k}\conj{z_k}\phi'_j(z_k)+e^{-i\alpha_k}\phi_j(z_k)$,  $G_{kj}=e^{i\alpha_k}\phi'_j(z_k)$, and $\alpha_k$ denotes the angle between the vector normal to the boundary and the real axis.
+for $j=1,\ldots,N$, where $F_{ij}=e^{i\alpha_i}\conj{z_i}\phi'_j(z_i)+e^{-i\alpha_i}\phi_j(z_i)$,  $G_{ij}=e^{i\alpha_i}\phi'_j(z_i)$, and $\alpha_i$ denotes the angle between the vector normal to the boundary and the real axis at the point $z=z_i$.
 
-In our implementation, we solve \eqref{eq:LS} with MATLAB's backslash. But in order to get good results, it is crucial to do column scaling, which we do by right preconditioning with
+In our implementation, we solve \eqref{eq:LS} via the MATLAB backslash command. In order to get good results, it is crucial to do column scaling, which we do by right multiplying by
 \begin{equation}
 D=\diag( A^\transp A)^{-1/2}.
 \end{equation} 
-This can be illustrated in a few lines of code,.
+This can be illustrated in a few lines of code,
 \begin{verbatim}
 D = spdiag(1./sqrt(sum(A.^2,1)));
 y = (A*D)\b; 
@@ -73,33 +72,33 @@ x = D*y;
 \end{verbatim}
 
 
-\subsection{Adaptive refinement}
-We use a similar adaptive refinement strategy to the one that is presented in \cite{Gopal19}, which is producing a sequence of linear least-squares problems of increasing size. In brief, we associate each entry of the residual vector with the nearest corner by defining the index sets
+\subsection{Adaptive strategy}
+We use a similar adaptive strategy to the one that is presented in \cite{gopal19}, which consists of constructing a sequence of linear least-squares problems of increasing size. In brief, we associate each entry of the residual vector $r=b-Ax$ with the nearest corner $w_k$ by defining the index sets
 \begin{equation}
-\mathcal{I}_k = \left\{1\leq j\leq N : \arg\min_{1\leq i \leq M} \abs{w_i-z_j}=k\right\},\quad k=1,\ldots, P.
+\mathcal{I}_k = \Big\{1\leq j\leq M : k=\arg\min_{1\leq l \leq K} \abs{w_l-z_i}=k\Big\},\quad k=1,\ldots, K.
 \end{equation}
-And after solving the least-squares problem, we decide to increase the number of poles based on the partial residuals, 
+After solving the least-squares problem, we decide to increase the number of poles based on the partial residuals, 
 \begin{equation}
-R_k^2 = \sum_{j\in \mathcal{I}_k} r_j^2,\quad k=1,\ldots, P,
+R_k^2 = \sum_{j\in \mathcal{I}_k} r_j^2,\quad k=1,\ldots, K,
 \end{equation}
-on which we do a histogram. On the next least-squares problem, we increase the number of poles on every corner, but more poles will be placed near the corners that fall on the bin with the largest residual.
+on which we do a histogram. In the next least-squares problem, we increase the number of poles at every corner, but more poles will be placed near the corners that fall in the bin with the largest residual. The compuation is terminated if the residual estimated on a finer boundary mesh is sufficiently small or $N$ is too large or the error is not decreasing.
 
 
 \subsection{The algorithm}
-Here is our algorithm for solving \eqref{eq:bvp}. 
+Here is a summary of our algorithm. 
 
 \begin{algorithm}[H]
 	\SetAlgoLined
-	Define boundary $\partial \Omega$, corners $w_1,\ldots,w_P$, boundary function $h$ and tolerance $\varepsilon$\;
-	\While{True}{
-		Define rational function basis\;
-		Choose sampling points $z_i$, clustered near corners\;
-		Form the matrix $A$ and RHS vector $b$\;
-		Solve the least-squares problem $Ax\approx b$ for the coefficient vector $x$\;
-		Exit loop if $\norm{Ax-b}_2<\varepsilon$ or if $N$ too large or if the error is growing\;
-		Form the residual histogram and increment the number of poles per corner\;
+	Define boundary $\partial \Omega$, corners $w_1,\ldots,w_K$, boundary functions $h,k,\vec{g}$ and tolerance $\varepsilon$;\\
+	\Repeat{Exit criteria have been met}{
+		Define rational function basis;\\
+		Choose $M$ sampling points $z_1\ldots z_M$, clustered near corners;\\
+		Form the matrix $A$ and RHS vector $b$;\\
+		Solve the least-squares problem $Ax\approx b$ for the coefficient vector $x$;\\
+		Exit loop if $\norm{Ax-b}_2<\varepsilon$ or if $N$ too large or if the error is growing;\\
+		Form the residual histogram and increment the number of poles per corner accordingly;\\
 	}
-	Confirm accuracy by checking error on a finer boundary mesh\;
-	Construct a function to evaluate the solution based on the computed coefficiets $x$\;
+	Confirm accuracy by checking error on a finer boundary mesh;\\
+	Construct a function to evaluate the solution based on the computed coefficients $x$;\\
 	\caption{The lightning Stokes solver.}
 \end{algorithm}

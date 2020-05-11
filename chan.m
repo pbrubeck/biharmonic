@@ -1,9 +1,9 @@
 function [res]=chan(kmax,iprob)
-ifprint=false;
+ifprint=true;
 ifslow=false;
 maxpol=10;
 
-nplt=64; Lplt=5;
+nplt=128; Lplt=5;
 if(nargin<2), iprob=1; end
 
 L1=5; H1=1;
@@ -46,11 +46,13 @@ if(iprob==1)
 end
 %ftop=@(z) 0*z;utop=@(z) 0*z;
 function [psi,uu,pp]=vfun(z)
+    s0=ufun(w(2))-1i*ftop(w(2));
     [psi,uu,pp]=ufun(z);
-    psi=psi-1i*ftop(z);
+    psi=psi-1i*ftop(z)-s0;
     uu=uu+conj(utop(z));
     pp=pp+ptop(z);
 end
+
 
 kmin=1; 
 res=zeros(kmax,1);
@@ -88,6 +90,7 @@ if(ifslow), npol(:)=k; end
     un2=repmat(1i*(2*(imag(uw)>0)-1).*ut,1,length(tt));
     id2=repmat(4,length(uw),length(tt));
     wq2=ones(size(z2));
+    wq2=1./abs(z2);
 
     mpol=ones(size(w));
     mpol([1,2,5])=npol(1:3).^2;
@@ -118,11 +121,10 @@ if(ifslow), npol(:)=k; end
     bctype(:)=1; bcdata=-conj(utop(zs));
     end
 
-    mass(id>=2)=1;
+    hol=[];
+    mass(id>=1)=1;
     %mass(:)=1; 
-    ifp0=true;
-    ifp0=false;
-    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass,ifp0);
+    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,hol,mass);
     res(k)=norm(r);
     ri=full(sparse([id;id],ones(size(r)),r.^2,max(id),1));
     kk=adapt_hist(ri);
@@ -134,14 +136,19 @@ end
 tsol=toc;
 wx=real(w); w=w+(Lplt/max(wx)-1)*wx;
 
-
-
-
-figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
+figure(2); clf;
 L=0.5; wedge=[1i*L; 0; L]+w(2); ne=0; nce=4; stol=res(end);
 cs1=eddy_hunter(@vfun,wedge,ne,nplt,nce,stol); title('First Eddy');
-if(ifprint), print('-depsc','step_eddy'); set(gcf,'Renderer','opengl'); end
+if(ifprint)
+%     pos = get(gcf,'paperposition');
+%     set(gcf,'paperposition',[pos(1),pos(2), 12, 12]);
+%     set(gca, 'Units', 'normalized', 'Position', [0 0.15 1 0.75]);
+    set(gcf,'render','painters');
+    drawnow; print('-depsc','chan_eddy'); 
+    set(gcf,'render','opengl');    
+end
 
+cs1=cs1(:);
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -157,72 +164,55 @@ zz=xx+1i*yy;
 psi=nan(size(zz)); uu=nan(size(zz)); pp=nan(size(zz));
 tic;
 [psi(ib),uu(ib),pp(ib)]=vfun(zz(ib));
-psi=psi-psi(zz==0);
 tval=toc*1E3/nnz(ib);
 pp(zz==0)=-5;
 
 nc=10;
-cs1=cs1(:);
 cs=[linspace(stol,max(real(psi(:))),nc)';cs1(abs(cs1)>stol)]; tc=1E-3;
 lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
-figure(1); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-subplot(1,2,1);
+
+figure(1); clf;
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
 colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
 
+plot(real(pol),imag(pol),'.r',ms,10);
 hold off; grid off; axis equal; 
 %cf=colorbar(); cf.TickLabelInterpreter='latex';
 
-subplot(1,2,2); 
+
+ylim([-3, 3]);
+
+if(ifprint)
+    pos = get(gcf,'paperposition');
+    set(gcf,'paperposition',[pos(1),pos(2), 50, 10]);
+    set(gca, 'Units', 'normalized', 'Position', [0 0 1 1]);
+    set(gcf,'render','painters');
+    drawnow; print('-depsc','chan'); 
+    set(gcf,'render','opengl');    
+end
+
+
+
+figure(3);
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
-axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
+xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
-if(ifprint), print('-depsc','step'); set(gcf,'Renderer','opengl'); end
 
-return
-
-
-figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-surf(real(zz),imag(zz),real(psi)); hold on;
-hold off; grid off; %axis equal; %axis off;
-xlim([x1,x2]); ylim([y1,y2]); %caxis([0,s2]);
-
-colormap(jet(256)); %shading interp;
-cb=colorbar(); cb.TickLabelInterpreter='latex';
-title('Stream function');
-%if(ifprint), print('-depsc','chan_pres'); end
-
-figure(3); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
-subplot(1,2,2); 
-plot(w([1:end,1]),'-k'); hold on;
-plot(real(hol),imag(hol),'ob'); 
-plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
-hold off; axis equal; xlim([x1,x2]); 
-
-subplot(1,2,1); 
-%if(ifprint), subplot(1,1,1); end
-semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
-axis tight; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('sqrt(DoFs)'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
-xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
-text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,20);
-text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,20);
-if(ifprint), print('-depsc','chan_conv'); end
+if(ifprint)
+%     pos = get(gcf,'paperposition');
+%     set(gcf,'paperposition',[pos(1),pos(2), 12, 12]);
+%     set(gca, 'Units', 'normalized', 'Position', [0.1 0.2 0.9 0.7]);
+    set(gcf,'render','painters');
+    drawnow; print('-depsc','chan_conv'); 
+    set(gcf,'render','opengl');    
+end
 
 
-figure(5);
-plot(real(zz(imag(zz)==1)),real(psi(imag(zz)==1))); hold on;
-plot(real(zz(imag(zz)==0)),real(psi(imag(zz)==0))); hold on;
-plot(real(zz(imag(zz)==-1)),real(psi(imag(zz)==-1))); hold off;
-
-
-return;
-L=0.5; wedge=[1i*L; 0; L]-1i;
-figure(4); clf; eddy_hunter(@vfun,wedge,1,32);
 end

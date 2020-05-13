@@ -2,7 +2,7 @@
 
 \section{Application to Stokes flow \label{sec:physics}}
 The material of this section is presented merely to connect the biharmonic equation and the
-Goursat representation to the application context of Stokes flow. This approach is standard and can be found in textbooks such as \cite{ockendon}. Let $\vec{u}=(u,v)^T$ be the velocity field of a steady incompressible 2D fluid flow, and let $p$ be the associated pressure field, which is defined up to a constant. In the limit pf zero Resynolds number and in the absence of body forces, the steady-state equations for the conservation of momentum and the incompressibility constraint are given by
+Goursat representation to the application context of Stokes flow. This approach is standard and can be found in textbooks such as \cite{ockendon95}. Let $\vec{u}=(u,v)^T$ be the velocity field of a steady incompressible 2D fluid flow, and let $p$ be the associated pressure field, which is defined up to a constant. In the limit pf zero Resynolds number and in the absence of body forces, the steady-state equations for the conservation of momentum and the incompressibility constraint are given by
 \begin{subequations}\label{eq:stokes}
 \begin{align}
 -\nabla^2 \vec{u} + \nabla p &= 0,\label{eq:momen}\\
@@ -51,7 +51,7 @@ p-i\omega = 4 f'(z).
 \end{equation}
 Since the pressure is uniquely defined up to a constant, we can relate this freedom to a pressure shift of $p_0$. 
 
-We now consider the simplest model problem, regarding the Stokes flow near a sharp corner of angle $2\alpha$ caused by (steadily) stirring the distant fluid. For ease of interpretation, it is convenient to forget about the Goursat representation and switch to polar coordinates centered at the corner, i.e. $\Omega = \{z = re^{i\theta} : r > 0, -\alpha \leq \theta \leq \alpha \}$ . Intuitively, if the stirring pushes the fluid from one edge to the other, the flow must rotate near the corner, as it will be deflected by the edges. On the other hand, a stirring that pushes the fluid towards the corner will cause the flow to split and rotate in either direction near corner. The later situation is commonly referred as symmetric flow, while the former is known as anti-symmetric flow. The asymptotic solution as $r\to 0$ for the anti-symmetric flow inside the wedge caused by a perturbation at infinity was rederived by Moffatt in \cite{moffatt},
+We now consider the simplest model problem, regarding the Stokes flow near a sharp corner of angle $2\alpha$ caused by (steadily) stirring the distant fluid. For ease of interpretation, it is convenient to forget about the Goursat representation and switch to polar coordinates centered at the corner, i.e. $\Omega = \{z = re^{i\theta} : r > 0, -\alpha \leq \theta \leq \alpha \}$ . Intuitively, if the stirring pushes the fluid from one edge to the other, the flow must rotate near the corner, as it will be deflected by the edges. On the other hand, a stirring that pushes the fluid towards the corner will cause the flow to split and rotate in either direction near corner. The later situation is commonly referred as symmetric flow, while the former is known as anti-symmetric flow. The asymptotic solution as $r\to 0$ for the anti-symmetric flow inside the wedge caused by a perturbation at infinity was rederived by Moffatt in \cite{moffatt64},
 \begin{equation}
 \psi_\lambda(r,\theta) \sim \Re\left\{r^\lambda \left[\cos{(\lambda\alpha)}\cos{\left((\lambda-2)\theta\right)}+\cos{\left((\lambda-2)\alpha\right)}\cos{(\lambda\theta)}\right]\right\},
 \end{equation}

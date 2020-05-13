@@ -5,7 +5,7 @@ In this section we describe the lightning Stokes solver that solves \eqref{eq:bi
 
 
 \subsection{Rational functions}
-Following \cite{Gopal19}, we use rational functions to approximate the analytic functions appearing in the
+Following \cite{gopal19}, we use rational functions to approximate the analytic functions appearing in the
 Goursat representation, which guarantees a biharmonic function. We find the coefficients that
 best fit the boundary conditions in the least-squares sense. We write
 \begin{equation}
@@ -18,18 +18,18 @@ where $f_j, g_j\in \mathbb{C}$ add up to $4N$ real degrees of freedom, and corre
 
 For the rational functions, we choose poles $\beta_{kn}$ clustered near the corners $w_k$, as described in \cite{gopal19},
 \begin{equation}
-\beta_{kn} = w_n + Le^{i\theta_k} e^{-\sigma (\sqrt{N_k}-\sqrt{n})}, \quad k=1,\ldots,K,\quad n=1,\ldots,N_k,
+\beta_{kn} = w_k + Le^{i\theta_k} e^{-\sigma (\sqrt{N_k}-\sqrt{n})}, \quad k=1,\ldots,K,\quad n=1,\ldots,N_k,
 \end{equation}
 where $\sigma=4$, $\theta_k$ is the angle formed between the real axis and the bisector at the corner $w_k$, and $L$ is a characteristic length scale associated with $\Omega$. For the polynomial basis functions, $p_n(z)$, we construct the  the discretely-orthogonal ``Vandermonde with Arnoldi'' polynomials from \cite{brubeck19}, which obey an $(n+2)$-term recurrence relation
 \begin{equation} \label{eq:arnoldi}
 H_{n,n+1} p_{n+1}(z) = z p_n(z) - \sum_{k=0}^n H_{n,k} p_k(z),\quad n=1,\ldots,N_0, \quad p_0(z)=1.
 \end{equation}
-Here $H$ being the upper-Hessenberg matrix from the Arnoldi iteration on the Krylov subspace $\mathcal{K}_{N_0}(\diag(z_i), e)$, where $e$ is the vector with all entries equal to 1. We ca differentiate \eqref{eq:arnoldi} to obtain a recurrence relation for $p_n'(z)$. This allows us to treat boundary conditions involving $f'(z)$ and $g'(z)$.
+Here $H$ is the upper-Hessenberg matrix from the Arnoldi iteration on the Krylov subspace $\mathcal{K}_{N_0+1}(\diag(z_i), e)$, where $e$ is the vector with all entries equal to 1. We can differentiate \eqref{eq:arnoldi} to obtain a recurrence relation for $p_n'(z)$. This allows us to treat boundary conditions involving $f'(z)$ and $g'(z)$.
 
 
 
 \subsection{Linear least-squares system}
-The two boundary conditions (2) are enforced on a set of $M > 2N$ sample points $\{z_i \}_{i=1}^M$, which
+The two boundary conditions \eqref{eq:bcs} are enforced on a set of $M > 2N$ sample points $\{z_i \}_{i=1}^M$, which
 are clustered near the corners similarly as $\beta_{kn}$, by approximately solving by least-squares
 \begin{equation} \label{eq:LS}
 A x\approx b,
@@ -48,11 +48,11 @@ x_ j = \matlabmatrix{\real{f_j} \imag{f_j} \real{g_j} \imag{g_j}}^\transp.
 For instance, a condition on both velocity components imposed at $z=z_i$ will correspond to two rows with right-hand side entries $b_i=(U(z_i), -V(z_i))^\transp$ and blocks
 \begin{equation}
 \renewcommand*{\arraystretch}{1.5}
-A_{kj}=\matlabmatrix{\real{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} -\imag{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} \real{\phi'_j(z_i)} -\imag{\phi'_j(z_i)}; 
+A_{ij}=\matlabmatrix{\real{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} -\imag{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} \real{\phi'_j(z_i)} -\imag{\phi'_j(z_i)}; 
 \imag{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \phantom{+}\real{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \imag{\phi'_j(z_i)} \phantom{+}\real{\phi'_j(z_i)}},
 \end{equation}
 for $j=1,\ldots,N$. A no-slip condition can be implemented by providing a zero RHS.
-For a slip condition, one may also specify the velocity component tangential and set the stream function to some constant $C$ along the boundary. At the point $z=z_k$, this will correspond to two rows with RHS $b_k=(U_t(z_k),C)^\transp$ and blocks
+For a slip condition, one may also specify the velocity component tangential and set the stream function to some constant $C$ along the boundary. At the point $z=z_i$, this will correspond to two rows with RHS $b_i=(U_t(z_i),C)^\transp$ and blocks
 \begin{equation}
 \renewcommand*{\arraystretch}{1.5}
 A_{ij}=\matlabmatrix{\imag{F_{ij}} \real{F_{ij}} \imag{G_{ij}} \real{G_{ij}}; 
@@ -75,13 +75,13 @@ x = D*y;
 \subsection{Adaptive strategy}
 We use a similar adaptive strategy to the one that is presented in \cite{gopal19}, which consists of constructing a sequence of linear least-squares problems of increasing size. In brief, we associate each entry of the residual vector $r=b-Ax$ with the nearest corner $w_k$ by defining the index sets
 \begin{equation}
-\mathcal{I}_k = \Big\{1\leq j\leq M : k=\arg\min_{1\leq l \leq K} \abs{w_l-z_i}=k\Big\},\quad k=1,\ldots, K.
+\mathcal{I}_k = \Big\{1\leq i\leq M : k=\arg\min_{1\leq l \leq K} \abs{w_l-z_i}\Big\},\quad k=1,\ldots, K.
 \end{equation}
 After solving the least-squares problem, we decide to increase the number of poles based on the partial residuals, 
 \begin{equation}
 R_k^2 = \sum_{j\in \mathcal{I}_k} r_j^2,\quad k=1,\ldots, K,
 \end{equation}
-on which we do a histogram. In the next least-squares problem, we increase the number of poles at every corner, but more poles will be placed near the corners that fall in the bin with the largest residual. The compuation is terminated if the residual estimated on a finer boundary mesh is sufficiently small or $N$ is too large or the error is not decreasing.
+on which we do a histogram. In the next least-squares problem, we increase the number of poles at every corner, but more poles will be placed near the corners that fall in the bin with the largest residual. The computation is terminated if the residual estimated on a finer boundary mesh is sufficiently small or $N$ is too large or the error is not decreasing.
 
 
 \subsection{The algorithm}

@@ -3,7 +3,7 @@
 
 \section{Biharmonic functions in simply-connected domains \label{sec:goursat}}
 
-The Goursat representation is the key ingredient required to extend the lightning solver to biharmonic problems, going back to the French mathematician Goursat in 1898 \cite{goursat}. It allows one to represent biharmonic functions in terms of two analytic functions, which our algorithms will then approximate by rational functions. In line with the use of analytic functions, and throughout the rest of the paper, we represent $x$ and $y$ via the complex variable $z = x + iy$. We include a precise statement of the Goursat representation in the form of a theorem, along with two proofs, which we consider to be valuable in giving two perspectives on what is going on. The original proof was given by Goursat in \cite{goursat}, and an alternative proof is given by Muskhelishvili in \cite{mus19}. Both of these are also found in textbooks such as \cite{ockendon95} and \cite{mus77}. Although we label them ``proofs'', we don’t give these arguments in full detail. For a rigorous discussion, see [\textbf{Find a reference for this}].
+The Goursat representation is the key ingredient required to extend the lightning solver to biharmonic problems, going back to the French mathematician Goursat in 1898 \cite{goursat98}. It allows one to represent biharmonic functions in terms of two analytic functions, which our algorithms will then approximate by rational functions. In line with the use of analytic functions, and throughout the rest of the paper, we represent $x$ and $y$ via the complex variable $z = x + iy$. We include a precise statement of the Goursat representation in the form of a theorem, along with two proofs, which we consider to be valuable in giving two perspectives on what is going on. The original proof was given by Goursat in \cite{goursat98}, and an alternative proof is given by Muskhelishvili in \cite{musk19}. Both of these are also found in textbooks such as \cite{ockendon95} and \cite{musk77}. Although we label them ``proofs'', we don’t give these arguments in full detail. For a rigorous discussion, see [\textbf{Find a reference for this}].
 
 
 \begin{theorem}[Goursat representation]
@@ -19,16 +19,16 @@ The functions $f(z)$ and $g(z)$ are uniquely defined up to addition of arbitrary
 The use of the imaginary as opposed to the real part is standard in the literature and helps
 to simplify the expressions for physical quantities associated with $\psi$. Series expansions based on
 \eqref{eq:goursat} have been used to find numerical solutions to BVPs associated with \eqref{eq:bih} by Gaskell et al. in
-\cite{gaskell}, Finn, Cox and Byrne in \cite{finn}, and by Luca and Crowdy in \cite{luca18}, among many others. Though
+\cite{gaskell98}, Finn, Cox and Byrne in \cite{finn03}, and by Luca and Crowdy in \cite{luca18}, among many others. Though
 the Goursat representation has been used by various people over the years, it is used far less than more general tools such as FEM and integral equations and indeed is surprisingly hard to find in textbooks.
 
 
-\begin{proof}[Goursat's proof \cite{Gou98}]
+\begin{proof}[Goursat's proof \cite{goursat98}]
 First, we note that the biharmonic operator can be written in terms of Wirtinger derivatives,
 \begin{equation}
 \nabla^4 \psi = 16\frac{\partial^4 \psi}{\partial\conj{z}^2 \partial z^2}.
 \end{equation}
-Treating $z$ and $\conj{z}$ as independent variables, one can solve this equation by separation of variables. Under the assumption that $\psi$ is analytic with respect to te real variables $x$ and $y$, we may plug in the ansatz $\psi=\sum_k \psi_k$, where $\psi_k= A_k(z)B_k(\conj{z})$, obtaining
+Treating $z$ and $\conj{z}$ as independent variables, one can solve this equation by separation of variables. Under the assumption that $\psi$ is analytic with respect to the real variables $x$ and $y$, we may plug in the ansatz $\psi=\sum_k \psi_k$, where $\psi_k= A_k(z)B_k(\conj{z})$, obtaining
 \begin{equation}
 \frac{\partial^4 \psi_k}{\partial\conj{z}^2 \partial z^2} = A_k''(z) B_k''(\conj{z}) = 0,
 \end{equation} 
@@ -44,7 +44,7 @@ which implies \eqref{eq:goursat} by letting $f(z) = -2i A_2(z)$ and $g(z) = -2i 
 \end{proof}
 
 
-\begin{proof}[Muskhelishvili's proof \cite{Mus19}]
+\begin{proof}[Muskhelishvili's proof \cite{musk19}]
 If $\omega=-\nabla^2 \psi$, then $-\nabla^2\omega = \nabla^4\psi = 0$. Now define $p$ as the harmonic conjugate of $\omega$, satisfying the Cauchy-Riemann conditions
 \begin{equation}
 \frac{\partial\omega}{\partial x} = \frac{\partial p}{\partial y}, \quad

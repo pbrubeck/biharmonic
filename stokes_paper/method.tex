@@ -30,16 +30,16 @@ Here $H$ is the upper-Hessenberg matrix from the Arnoldi iteration on the Krylov
 
 \subsection{Linear least-squares system}
 The two boundary conditions \eqref{eq:bcs} are enforced on a set of $M > 2N$ sample points $\{z_i \}_{i=1}^M$, which
-are clustered near the corners similarly as $\beta_{kn}$, by approximately solving by least-squares
+are clustered near the corners similarly as $\beta_{kn}$, by approximately solving via least-squares
 \begin{equation} \label{eq:LS}
 A x\approx b,
 \end{equation}
-where $A\in\reals^{2M\times 4N}$, $x\in\reals^{4N}$ and $b\in\reals^{2M}$. If we partition the system into blocks, each associating the complex coefficients for a basis function $\phi_j(z)$ wth the point $z=z_i$ where it or its derivative is evaluated, we have
+where $A\in\reals^{2M\times 4N}$, $x\in\reals^{4N}$ and $b\in\reals^{2M}$. If we partition the system into blocks, each associating the complex coefficients for a basis function $\phi_j(z)$ with the point $z=z_i$ where it or its derivative is evaluated, we have
 \begin{equation}
 \matlabmatrix{A_{11} {\cdots} A_{1N}; {\vdots} {\ddots} {\vdots}; A_{M1} {\cdots} A_{MN}}
 \matlabmatrix{x_{1}; {\vdots}; x_{N}} \approx \matlabmatrix{b_{1}; {\vdots}; b_{M}},
 \end{equation}
-where $A_{ij}\in\reals^{2\times 4}$ are the blocks associated with the basis function $\phi_{j}(z)$ evaluated at $z=z_i$, $b_i\in\reals^2$ correspond to the RHS for the two BCs imposed at $z=z_i$, and $x_j\in\reals^4$ contain the 4 real degrees of freedom of the complex coefficients of $\phi_j(z)$ in $f(z)$ and $g(z)$,
+where $A_{ij}\in\reals^{2\times 4}$ are the blocks associated with the basis function $\phi_{j}(z)$ or its derivative evaluated at $z=z_i$, $b_i\in\reals^2$ correspond to the RHS for the two BCs imposed at $z=z_i$, and $x_j\in\reals^4$ contain the 4 real degrees of freedom of the complex coefficients of $\phi_j(z)$ in $f(z)$ and $g(z)$,
 \begin{equation}
 x_ j = \matlabmatrix{\real{f_j} \imag{f_j} \real{g_j} \imag{g_j}}^\transp.
 \end{equation}
@@ -51,8 +51,8 @@ For instance, a condition on both velocity components imposed at $z=z_i$ will co
 A_{ij}=\matlabmatrix{\real{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} -\imag{\conj{z_i}\phi'_j(z_i)-\phi_j(z_i)} \real{\phi'_j(z_i)} -\imag{\phi'_j(z_i)}; 
 \imag{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \phantom{+}\real{\conj{z_i}\phi'_j(z_i)+\phi_j(z_i)} \imag{\phi'_j(z_i)} \phantom{+}\real{\phi'_j(z_i)}},
 \end{equation}
-for $j=1,\ldots,N$. A no-slip condition can be implemented by providing a zero RHS.
-For a slip condition, one may also specify the velocity component tangential and set the stream function to some constant $C$ along the boundary. At the point $z=z_i$, this will correspond to two rows with RHS $b_i=(U_t(z_i),C)^\transp$ and blocks
+for $j=1,\ldots,N$. A no-slip condition can be implemented by fixing $b_i=(0,0)^\transp$.
+For a slip condition, one may also specify the tangential velocity component and set the stream function to some constant value $\psi_0$ along the boundary. At the point $z=z_i$, this will correspond to two rows with RHS $b_i=(U_t(z_i),\psi_0)^\transp$ and blocks
 \begin{equation}
 \renewcommand*{\arraystretch}{1.5}
 A_{ij}=\matlabmatrix{\imag{F_{ij}} \real{F_{ij}} \imag{G_{ij}} \real{G_{ij}}; 

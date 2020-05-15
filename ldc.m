@@ -1,5 +1,5 @@
 function [res]=ldc(kmax)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 
 w=[1+1i;-1+1i;-1-1i;1-1i];
@@ -26,9 +26,12 @@ tic;
 for k=kmin:kmax
     n=k*numel(w);
     if(k>1), n=n+2*k; end
-
+    
+    
     if(ifslow), npol(:)=k; end
     %disp(npol.')
+    
+
     [pol,zs,un,id,mass]=adapt_poles(npol.^2,w);
     
     bctype=zeros(size(zs));
@@ -40,7 +43,8 @@ for k=kmin:kmax
     bcdata(top)=v1;
     bcdata(bot)=v2;
     
-    %mass(id>2)=1;
+    
+    %mass(id>2)=mass(id>2).^(0);
     [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
 
@@ -56,7 +60,7 @@ figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 L=0.2*A; wedge=[1i*L; 0; L]+w(3); ne=0; nplt=128; nc=4; stol=res(end)/10;
 subplot(1,2,1); cs1=eddy_hunter(ufun,wedge,ne,nplt,nc,stol); title('Second Eddy');
 %subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,nplt,nc,stol);
-L=0.0135*A; wedge=[1i*L; 0; L]+w(3);
+L=0.015*A; wedge=[1i*L; 0; L]+w(3);
 subplot(1,2,2); eddy_hunter(ufun,wedge,ne,nplt,nc,stol); title('Third Eddy');
 if(ifprint), print('-depsc','ldc_eddy'); set(gcf,'Renderer','opengl'); end
 

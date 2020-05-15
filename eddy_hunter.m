@@ -17,7 +17,7 @@ a=R*un;
 
 
 f0=real(ufun(w(2))); 
-f0
+f0=0;
 %f0=0;
 cf=chebfun(@(x) real(ufun(w(2)+a*x)-f0), [0,1], 64); % low frequency
 [fe,re]=minandmax(cf,'local');
@@ -55,7 +55,6 @@ else
 end
 
 
-
 fe=fe(:)+f0;
 fe=real(ufun(w(2)+a*re(:)));
 cs=fe(:)*linspace(0.05,0.95,nc);
@@ -88,7 +87,7 @@ end
 
 % Plot the zero contour
 cse=[f0,f0];
-ee = 2:size(cs,1);
+ee = 1:size(cs,1);
 ze=reshape(zz(:,:,ee),size(zz,1),[]);
 psie=reshape(psi(:,:,ee),size(psi,1),[]);
 contour(real(ze),imag(ze),psie,cse,'k'); hold on;

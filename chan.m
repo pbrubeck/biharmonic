@@ -1,5 +1,5 @@
 function [res]=chan(kmax,iprob)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 maxpol=10;
 

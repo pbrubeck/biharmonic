@@ -166,6 +166,10 @@ P=spdiag(1./a(ja));
 A=A(:,ja)*P;
 
 y=A\r;
+
+%y=y+A\(r-A*y);
+%y=y+A\(r-A*y);
+
 r=(r-A*y)/norm(r);
 dofs=length(y);
 

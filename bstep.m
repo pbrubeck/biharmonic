@@ -1,5 +1,5 @@
 function [res]=bstep(kmax)
-ifprint=true;
+ifprint=false;
 ifslow=false;
 
 nc=10;

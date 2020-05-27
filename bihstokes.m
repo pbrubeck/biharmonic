@@ -1,4 +1,4 @@
-function [psi,dofs,r] = bihstokes(n,z,un,bctype,bcdata,w,pol,hol,mass,ifp0)
+function [psi,dofs,r,pol] = bihstokes(n,z,un,bctype,bcdata,w,pol,hol,mass,ifp0)
 % Solves the biharmonic equation with the lightning method
 if(nargin<6), w=[]; end
 if(nargin<7), pol=[]; end
@@ -6,7 +6,7 @@ if(nargin<8), hol=[]; end
 if(nargin<9), mass=[]; end
 if(nargin<10), ifp0=false; end
 iflog=true;
-
+ifaaa=false;
 
 % simple poles
 [~,jj]=min(abs(w(:)-pol(:).'),[],1);
@@ -24,6 +24,7 @@ C1=-num1./(D.^2);
 % polynomial basis, discretely orthogonal
 if(n>=0)
     [~,H]=polyfitA(z,z,n);
+    %H(:) = 0; H(2:end,:)=eye(size(H,2)); 
     [V0,V1]=polydiffA(z,H);
 else
     H=zeros(0,1);
@@ -178,7 +179,6 @@ x(ja)=P*y;
 if(nsp>0)
     xx=zeros(numel(x)+size(GB,1),1);
     xx(kd)=x; xx(rd)=GB*x; x=xx;
-    C*x
 end
 
 nb=size(R0,2);
@@ -188,12 +188,11 @@ g=x(:,1)+1i*x(:,2);
 f=x(:,3)+1i*x(:,4);
 
 psi=@goursat;
-return
+%return
 
 if(ifaaa)
-    atol=1E-5;
-    [af0,af1,ag0,ag1] = aaa_goursat(z,R0*f,R1*f,R0*g,R1*g,atol);
-    psi=@(z) eval_goursat(af0,af1,ag0,ag1,z);
+    numel(pol)
+    [psi,pol] = aaa_goursat(z,R0*f,R0*g);
 end
 
 %figure(32); semilogy(1:nb,abs(f),1:nb,abs(g));
@@ -239,19 +238,20 @@ end
 
 
 
-function [af0,af1,ag0,ag1] = aaa_goursat(Z,f0,f1,g0,g1,tol)
-if(nargin<6), tol=1E-6; end
-N = numel(Z);
-[af0,polf0] = aaa(f0,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
-[af1,polf1] = aaa(f1,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
-[ag0,polg0] = aaa(g0,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
-[ag1,polg1] = aaa(g1,Z,'mmax',N/2,'tol',tol,'lawson',0,'cleanup',0);
+function [psi,polaaa] = aaa_goursat(Z,f0,g0)
+[rf, polf, resf, zerf, zf, yf, wf] = aaa(f0,Z,'lawson',0,'cleanup',1);
+[rg, polg, resg, zerg, zg, yg, wg] = aaa(g0,Z,'lawson',0,'cleanup',1);
+af = @(z) rdiff(z, zf, yf, wf);
+ag = @(z) rdiff(z, zg, yg, wg);
+psi = @(z) rgoursat(z,af,ag);
 
-return
+[numel(polf), numel(polg)]
+polaaa = [polf(:);polg(:)];
+
+%return
 inpolygonc = @(z,w) inpolygon(real(z), ...
             imag(z),real(w),imag(w));  
-polaaa = [polf0(:);polf1(:);polg0(:);polg1(:)];
-        
+
 if isempty(find(inpolygonc(polaaa,w),1)) % AAA successful
 else                                     % AAA unsuccess.: pole in region
    %badpol = polaaa(find(inpolygonc(polaaa,ww)));% poles in polygon
@@ -280,8 +280,28 @@ psi=reshape(-1i*(g0+conj(s(:)).*f0+1i*h0),size(s));
 u=reshape(conj(g1+conj(s(:)).*f1-conj(f0)+h1),size(s));
 p=reshape(conj(4*f1),size(s));
 end
+end
 
 
+function [r,dr]=rdiff(zz, zj, fj, wj)
+    zv = zz(:);                             
+    CC = 1./bsxfun(@minus, zv, zj.');
+    yj = wj.*fj;
+    p = CC*yj;
+    q = CC*wj;           
+    CC =-CC.*CC;
+    dp = CC*yj;
+    dq = CC*wj;
+    r  = p./q;
+    dr = (dp-r.*dq)./q;
+end
 
-
+function [psi,u,p]=rgoursat(z,f,g)
+    sz = size(z);
+    z = z(:);
+    [ff, df] = f(z);
+    [gg, dg] = g(z);
+    psi = reshape(-1i*(conj(z).*ff+gg), sz);
+    u = reshape(dg+conj(z).*df-conj(ff), sz);
+    p = reshape(4*df, sz);
 end

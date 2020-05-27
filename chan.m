@@ -1,11 +1,30 @@
-function [res]=chan(kmax,iprob)
-ifprint=false;
+function [res]=chan(kmax,ifprint,iprob)
+if(nargin<2), ifprint=false; end
 ifslow=false;
 maxpol=10;
 
 nplt=128; Lplt=5;
-if(nargin<2), iprob=1; end
+if(nargin<3), iprob=1; end
 
+myratio = (1+sqrt(5))/2;
+if(ifprint),close all; end
+function []=myprint(filename,rat)
+    if(nargin>1)
+        pos = get(gcf,'Position');
+        if(rat>1)
+            pos(3) = rat*pos(4);
+        else
+            pos(4) = (1/rat)*pos(3);
+        end
+        set(gcf,'Position',pos);
+    end
+    if(ifprint)
+        drawnow;
+        set(gcf,'Renderer','painters'); 
+        print('-depsc',filename); 
+        set(gcf,'Renderer','opengl'); 
+    end
+end
 L1=5; H1=1;
 r=14; A=2/(r-1); z0=1i*(H1+A);
 
@@ -139,14 +158,8 @@ wx=real(w); w=w+(Lplt/max(wx)-1)*wx;
 figure(2); clf;
 L=0.5; wedge=[1i*L; 0; L]+w(2); ne=0; nce=4; stol=res(end);
 cs1=eddy_hunter(@vfun,wedge,ne,nplt,nce,stol); title('First Eddy');
-if(ifprint)
-%     pos = get(gcf,'paperposition');
-%     set(gcf,'paperposition',[pos(1),pos(2), 12, 12]);
-%     set(gca, 'Units', 'normalized', 'Position', [0 0.15 1 0.75]);
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','chan_eddy'); 
-    set(gcf,'render','opengl');    
-end
+myprint('chan_eddy',myratio); 
+
 
 cs1=cs1(:);
 
@@ -184,35 +197,16 @@ hold off; grid off; axis equal;
 
 
 ylim([-3, 3]);
-
-if(ifprint)
-    pos = get(gcf,'paperposition');
-    set(gcf,'paperposition',[pos(1),pos(2), 50, 10]);
-    set(gca, 'Units', 'normalized', 'Position', [0 0 1 1]);
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','chan'); 
-    set(gcf,'render','opengl');    
-end
-
+myprint('chan',myratio);
 
 
 figure(3);
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlabel('$\sqrt{4N}$'); title('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
-
-if(ifprint)
-%     pos = get(gcf,'paperposition');
-%     set(gcf,'paperposition',[pos(1),pos(2), 12, 12]);
-%     set(gca, 'Units', 'normalized', 'Position', [0.1 0.2 0.9 0.7]);
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','chan_conv'); 
-    set(gcf,'render','opengl');    
-end
-
-
+myprint('chan_conv');
 end

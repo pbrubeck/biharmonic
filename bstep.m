@@ -1,8 +1,28 @@
-function [res]=bstep(kmax)
-ifprint=false;
+function [res]=bstep(kmax,ifprint)
+if(nargin<2), ifprint=false; end
 ifslow=false;
+ifstats=true;
+myratio = 1+(1+sqrt(5))/2;
+if(ifprint),close all; end
+function []=myprint(filename,rat)
+    if(nargin>1)
+        pos = get(gcf,'Position');
+        if(rat>1)
+            pos(3) = rat*pos(4);
+        else
+            pos(4) = (1/rat)*pos(3);
+        end
+        set(gcf,'Position',pos);
+    end
+    if(ifprint)
+        drawnow;
+        set(gcf,'Renderer','painters'); 
+        print('-depsc',filename); 
+        set(gcf,'Renderer','opengl'); 
+    end
+end
 
-nc=10;
+
 nplt=128;
 L1=1; L2=5; 
 H1=1; H2=1;
@@ -23,6 +43,9 @@ tic;
 %kmin=kmax; npol(:)=kmin; npol(w==0)=10+(kmin-4);
 for k=kmin:kmax
     if(ifslow), npol(:)=k; end
+    npol=min(npol,30);
+    npol'
+    
     n=numel(w)*k;
     
     %disp(npol');
@@ -53,7 +76,7 @@ for k=kmin:kmax
     end
 
     mass(:)=1;
-    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
+    [ufun,dofs(k),r,pol]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
     rtot=res(k)^2;
 
@@ -64,19 +87,14 @@ for k=kmin:kmax
 end
 tsol=toc;
 
-
+cs1=[0,0];
 figure(2); clf;
-L=0.5; wedge=[1i*L; 0; L]+w(6); ne=0; nce=4; stol=res(end);
+[~,ic]=min(abs(w+1i*H2));
+L=0.5; wedge=[1i*L; 0; L]+w(ic); ne=0; nce=4; stol=res(end);
 subplot(1,2,1); cs1=eddy_hunter(ufun,wedge,ne,nplt,nce,stol); title('First Eddy');
-%subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,nplt,nc,stol);
-L=0.03; wedge=[1i*L; 0; L]+w(6);
+L=1/36; wedge=[1i*L; 0; L]+w(ic);
 subplot(1,2,2); eddy_hunter(ufun,wedge,ne,nplt,nce,stol); title('Second Eddy');
-
-if(ifprint)
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','step_eddy'); 
-    set(gcf,'render','opengl');    
-end
+myprint('step_eddy',myratio); 
 
 % Plotting
 x1=min(real(w)); x2=max(real(w)); dx=x2-x1;
@@ -112,28 +130,20 @@ hold off; grid off; axis equal;
 
 xlim([-1.5, 5.5]);
 ylim([-1.5, 1.5]);
-
-if(ifprint)
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','step'); 
-    set(gcf,'render','opengl');    
-end
+myprint('step',myratio); 
 
 
 figure(3);
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlabel('$\sqrt{4N}$'); title('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
+if(ifstats)
 text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
-
-if(ifprint)
-    set(gcf,'render','painters');
-    drawnow; print('-depsc','step_conv'); 
-    set(gcf,'render','opengl');    
 end
+myprint('step_conv');
 
 
 return

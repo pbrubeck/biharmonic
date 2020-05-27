@@ -16,6 +16,7 @@ g=@(x,y) [sin(x).*cosh(y)+sa*x; cos(x).*sinh(y)+sa*y];
 x=[4.21; 2.26]; 
 x=NewtonRaphson(g,x);
 lambda=1+([1,1i]*x)/(2*alpha);
+disp(lambda-1);
 
 % Antisymmetric
 A= cos((lambda-2)*alpha);

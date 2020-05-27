@@ -1,6 +1,26 @@
-function [res]=ldc(kmax)
-ifprint=false;
+function [res]=ldc(kmax,ifprint)
+if(nargin<2), ifprint=false; end
 ifslow=false;
+myratio = 1+(1+sqrt(5))/2;
+if(ifprint),close all; end
+function []=myprint(filename,rat)
+    if(nargin>1)
+        pos = get(gcf,'Position');
+        if(rat>1)
+            pos(3) = rat*pos(4);
+        else
+            pos(4) = (1/rat)*pos(3);
+        end
+        set(gcf,'Position',pos);
+    end
+    if(ifprint)
+        drawnow;
+        set(gcf,'Renderer','painters'); 
+        print('-depsc',filename); 
+        set(gcf,'Renderer','opengl'); 
+    end
+end
+
 
 w=[1+1i;-1+1i;-1-1i;1-1i];
 %w=[1;1+1i;1i;-1+1i;-1;-1-1i;-1i;1-1i];
@@ -25,27 +45,41 @@ npol=ones(size(w));
 tic;
 for k=kmin:kmax
     n=k*numel(w);
-    if(k>1), n=n+2*k; end
-    
-    
+
+    %if(k>1), n=n+2*k; end
+        
     if(ifslow), npol(:)=k; end
     %disp(npol.')
     
-
-    [pol,zs,un,id,mass]=adapt_poles(npol.^2,w);
+    x=chebpts(k+1,1);
+    rad = inf(size(w));
+    [zs1,un1,id1,mass1] = polypts(w,rad,x);
+    mass1(:)=1;
+    
+    mpol = npol.^2;
+    [pol,zs,un,id,mass]=adapt_poles(mpol,w);
+    
+    %pol = pol(imag(pol)<0);
+    kd = id>0;
+    zs=[zs(kd);zs1];
+    un=[un(kd);un1];
+    id=[id(kd);id1];
+    mass=[mass(kd);mass1];
+    
     
     bctype=zeros(size(zs));
     bcdata=zeros(size(zs));
     tol=1E-15;
     top=abs(un-1i)<=tol;
     bot=abs(un+1i)<=tol;
+    
     bctype(top|bot)=1;
-    bcdata(top)=v1;
+    bcdata(top)=v1-0*real(zs(top)).^4;
     bcdata(bot)=v2;
     
     
-    %mass(id>2)=mass(id>2).^(0);
-    [ufun,dofs(k),r]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
+    mass(id>2)=1;
+    [ufun,dofs(k),r,pol]=bihstokes(n,zs,un,bctype,bcdata,w,pol,[],mass);
     res(k)=norm(r);
 
     ri=full(sparse([id;id],ones(size(r)),r.^2,numel(w),1));
@@ -54,15 +88,20 @@ for k=kmin:kmax
     npol=npol+1;
 end
 tsol=toc;
+lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
 
+figure(3);
+eddy_asymptotic(w([2,3,4,1]),ufun);
+myprint('ldc_loglog', myratio);
+%return
 
 figure(2); clf; if(ifprint), set(gcf,'Renderer', 'Painters'); end
 L=0.2*A; wedge=[1i*L; 0; L]+w(3); ne=0; nplt=128; nc=4; stol=res(end)/10;
 subplot(1,2,1); cs1=eddy_hunter(ufun,wedge,ne,nplt,nc,stol); title('Second Eddy');
 %subplot(1,2,2); eddy_hunter(ufun,-conj(wedge),ne,nplt,nc,stol);
-L=0.015*A; wedge=[1i*L; 0; L]+w(3);
+L=0.0125*A; wedge=[1i*L; 0; L]+w(3);
 subplot(1,2,2); eddy_hunter(ufun,wedge,ne,nplt,nc,stol); title('Third Eddy');
-if(ifprint), print('-depsc','ldc_eddy'); set(gcf,'Renderer','opengl'); end
+myprint('ldc_eddy', myratio);
 
 
 % Plotting
@@ -72,7 +111,7 @@ yy=linspace(min(imag(w)),max(imag(w)),nplt);
 [xx,yy]=ndgrid(xx,yy); zz=xx+1i*yy;
 
 tic;
-[psi,uu]=ufun(zz);
+[psi,uu,pp]=ufun(zz);
 tval=toc*1E3/numel(zz);
 uu([1,end],[1,end])=0;
 
@@ -81,38 +120,34 @@ uu([1,end],[1,end])=0;
 cs=[cs(:);reshape(cs1(abs(cs1)>stol),[],1)];
 tc=1E-3;
 
-lw='Linewidth'; ms='markersize'; fc='facecolor'; fs='fontsize';
-figure(1); clf;
 
+figure(1); clf;
 subplot(1,2,1);
 pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
-colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
-
+colormap(jet(256)); shading interp; caxis([0,1]); 
+%colorbar;
 
 plot(real(pol),imag(pol),'.r',ms,10); 
-hold off; grid off; axis equal; 
-xlim([-1.5,1.5]); ylim([-1.5,1.5]);
+hold off; grid off; axis equal; axis off;
+LR = 1.5;
+xlim([-LR,LR]); ylim([-LR,LR]);
 %cf=colorbar(); cf.TickLabelInterpreter='latex';
+set(gca,'Position',get(gca,'OuterPosition'));
 
 
+%return
 subplot(1,2,2); 
 semilogy(sqrt(dofs),res,'.-k',lw,2,ms,30);
 axis square; grid on; set(gca,'xminorgrid','off','yminorgrid','off');
-xlabel('$\sqrt{4N}$'); ylabel('Weighted residual'); ylim([1E-15,1E0]);
+xlabel('$\sqrt{4N}$'); title('Weighted residual'); ylim([1E-15,1E0]);
 xlim([0,10*ceil(0.1*sqrt(dofs(end)))]); ylim([1E-15,1E0]);
 text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
-
-
-if(ifprint)
-    set(gcf,'Renderer','Painters'); 
-    drawnow; print('-depsc','ldc'); 
-    set(gcf,'Renderer','opengl'); 
-end
+myprint('ldc', myratio);
 
 return
 subplot(1,2,1); plot(w([1:end,1]),'-k'); hold on;

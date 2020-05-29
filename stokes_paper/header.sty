@@ -10,12 +10,20 @@
 \usepackage[version=4]{mhchem}
 \usepackage{enumitem,verbatim}
 \usepackage{matlabmatrix}
-
+\usepackage{tikz} 
 
 \usepackage[ruled,vlined]{algorithm2e}
 
 \graphicspath{{../}}
 \epstopdfsetup{outdir=./}
+
+
+%Numbered environment
+\newcounter{example}[section]
+\newenvironment{example}[1][]{\refstepcounter{example}\par\medskip
+	\textbf{Example~\theexample. #1} \rmfamily}{\medskip}
+
+
 
 % Classic symbols
 \newcommand{\me}{\mathrm{e}}

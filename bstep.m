@@ -3,7 +3,7 @@ if(nargin<2), ifprint=false; end
 ifslow=false;
 ifstats=true;
 myratio = 1+(1+sqrt(5))/2;
-if(ifprint),close all; end
+%if(ifprint),close all; end
 function []=myprint(filename,rat)
     if(nargin>1)
         pos = get(gcf,'Position');

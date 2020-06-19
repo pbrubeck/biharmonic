@@ -1,7 +1,7 @@
 %!TEX root = stokes_paper.tex
 
 \section{Numerical Method \label{sec:method}}
-In this section we describe the lightning Stokes solver that solves \eqref{eq:bih}--\eqref{eq:bcs} when $\Omega$ is a curved polygon with $K$ corners $\{w_k\}_{k=1}^K$. The method consists of the rational approximation of the two analytic functions $f(z)$ and $g(z)$ that appear in the Goursat representation. We choose $N$ basis functions $\{\psi_j(z)\}_{j=1}^N$ with fixed poles, and we determine the coefficients by approximately solving a linear least-squares problem in $M$ sample boundary points $\{z_i\}_{i=1}^M \subset \partial\Omega$. We increase $N$ adaptively until the residual is below a certain tolerance or the refinement does not bring any improvement. Our implementation is based on the publicly available code $\texttt{laplace.m}$ \cite{tref20}, currently in version 6, and it provides a benchmark of practical implementation and speed of the algorithm.
+In this section we describe the lightning Stokes solver that solves \eqref{eq:bih}--\eqref{eq:bcs} when $\Omega$ is a curved polygon with $K$ corners $\{w_k\}_{k=1}^K$. The method consists of the rational approximation of the two analytic functions $f(z)$ and $g(z)$ that appear in the Goursat representation. We choose $N$ basis functions $\{\phi_j(z)\}_{j=1}^N$ with fixed poles, and we determine the coefficients by approximately solving a linear least-squares problem in $M$ sample boundary points $\{z_i\}_{i=1}^M \subset \partial\Omega$. We increase $N$ adaptively until the residual is below a certain tolerance or the refinement does not bring any improvement. Our implementation is based on the publicly available code $\texttt{laplace.m}$ \cite{tref20}, currently in version 6, and it provides a benchmark of practical implementation and speed of the algorithm.
 
 
 \subsection{Rational functions}
@@ -20,9 +20,9 @@ For the rational functions, we choose poles $\beta_{kn}$ clustered near the corn
 \begin{equation}
 \beta_{kn} = w_k + Le^{i\theta_k} e^{-\sigma (\sqrt{N_k}-\sqrt{n})}, \quad k=1,\ldots,K,\quad n=1,\ldots,N_k,
 \end{equation}
-where $\sigma=4$, $\theta_k$ is the angle formed between the real axis and the bisector at the corner $w_k$, and $L$ is a characteristic length scale associated with $\Omega$. For the polynomial basis functions, $p_n(z)$, we construct the  the discretely-orthogonal ``Vandermonde with Arnoldi'' polynomials from \cite{brubeck19}, which obey an $(n+2)$-term recurrence relation
+where $\sigma=4$, $\theta_k$ is the angle formed between the real axis and the bisector at the corner $w_k$, and $L$ is a characteristic length scale associated with $\Omega$. For the polynomial basis functions, $p_n(z)$, we construct the ``Vandermonde with Arnoldi'' polynomials from \cite{brubeck19}, which obey an $(n+2)$-term recurrence relation
 \begin{equation} \label{eq:arnoldi}
-H_{n,n+1} p_{n+1}(z) = z p_n(z) - \sum_{k=0}^n H_{n,k} p_k(z),\quad n=1,\ldots,N_0, \quad p_0(z)=1.
+H_{n+1,n} p_{n+1}(z) = z p_n(z) - \sum_{k=0}^n H_{k,n} p_k(z),\quad n=0,\ldots,N_0-1, \quad p_0(z)=1.
 \end{equation}
 Here $H$ is the upper-Hessenberg matrix from the Arnoldi iteration on the Krylov subspace $\mathcal{K}_{N_0+1}(\diag(z_i), e)$, where $e$ is the vector with all entries equal to 1. We can differentiate \eqref{eq:arnoldi} to obtain a recurrence relation for $p_n'(z)$. This allows us to treat boundary conditions involving $f'(z)$ and $g'(z)$.
 

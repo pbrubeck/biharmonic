@@ -122,7 +122,7 @@ pcolor(real(zz),imag(zz),abs(uu));  hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
-colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
+colormap(parula(256)); shading interp; axis off; caxis([0,1]); 
 
 plot(real(pol),imag(pol),'.r',ms,10);
 hold off; grid off; axis equal; 
@@ -143,13 +143,10 @@ text(1,1E-09,sprintf('dim($A$) = %d$\\times$%d',numel(r),dofs(end)),fs,14);
 text(1,1E-11,sprintf('Solve time %.2f sec',tsol),fs,14);
 text(1,1E-13,sprintf('Eval time %.2f ms/gridpoint',tval),fs,14);
 end
-myprint('step_conv');
+myprint('step_conv',myratio);
 
 
 return
-
-
-
 figure(4); clf;
 surf(real(zz),imag(zz),real(pp)); hold on;
 hold off; grid off; axis off;

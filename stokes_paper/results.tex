@@ -1,7 +1,7 @@
 %!TEX root = stokes_paper.tex
 
 \section{Examples \label{sec:results}}
-In this section, we test the lightning Stokes solver on various problems found in the literature. For each example, we present contour plots of the stream function $\psi$ superimposed on a color plot of the velocity magnitude $\sqrt{u^2+v^2}$. We use black contours for the main flow, which we also regard as the first Moffat eddy, and yellow contours for the subsequent eddies. We mark the poles near the corners by red dots. The plots of the linear least-squares (weighted) residual on the boundary indicate root-exponential convergence as expected. We also provide a close-up of each eddy with contours at $0,0.05,0.35,0.65,0.95$ relative to the maximum absolute value of $\psi$, and a log-log plot of $\abs{\psi}$ along the corner bisector to identify how many eddies are resolved by our numerical method.
+In this section, we test the lightning Stokes solver on various problems found in the literature. For each example, we present contour plots of the stream function $\psi$ superimposed on a color plot of the velocity magnitude $\sqrt{u^2+v^2}$. We use black contours for the main flow, which we also regard as the first Moffat eddy, and yellow contours for the subsequent eddies. We mark the poles near the corners by red dots. The plots of the linear least-squares (weighted) residual on the boundary indicate root-exponential convergence as expected. We also provide a close-up of each eddy with contours at 0, 0.05, 0.35, 0.65, and 0.95 relative to the maximum absolute value of $\psi$, and a log-log plot of $\abs{\psi}$ along the corner bisector to identify how many eddies are resolved by our numerical method.
 
 Reversing the sign of the boundary data $(h,k)=(\psi_0(z_i), U_t(z_i))$ and $\vec{g}=(U(z_i), -V(z_i))$ would have the effect of reversing the direction of the flow, since \eqref{eq:bih}--\eqref{eq:bcs} is linear. Therefore, the streamline pattern and the velocity magnitude plot would appear unaltered.
 
@@ -18,13 +18,13 @@ Figure \ref{fig:ldc_loglog} shows a log-log plot of $\abs{\psi}$ along the $45^\
 \vspace{2em}
 \includegraphics[width=\linewidth]{Figures/ldc_eddy}
 
-\caption{Stokes flow in a square lid-driven cavity. Stream contours and velocity magnitude (top left), convergence (top right), close-ups of the eddies (bottom).}
+\caption{Stokes flow in a square lid-driven cavity solved to 10-digit accuracy in 0.14 secs. on a laptop. Stream contours and velocity magnitude (top left), convergence (top right), and close-ups of the eddies (bottom).}
 \label{fig:ldc}
 \end{figure} 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.9\linewidth]{Figures/ldc_loglog}
-\caption{Stream function log-log plot along the $45^\circ$ line for Example \ref{ex:square}. The computed solution matches the asymptotic approximation to plotting accuracy over an amplitude range of ten orders of magnitude.}
+\caption{Stream function log-log plot along the $45^\circ$ line for Example \ref{ex:square}. The length scale $L=2\sqrt{2}$ corresponds to the diagonal of the cavity. The computed solution matches the asymptotic approximation to plotting accuracy over an amplitude range of ten orders of magnitude.}
 \label{fig:ldc_loglog}
 \end{figure}
 
@@ -33,11 +33,10 @@ Figure \ref{fig:ldc_loglog} shows a log-log plot of $\abs{\psi}$ along the $45^\
 
 \begin{example}[Lid-driven triangular cavity.]
 \label{ex:triangle}
-The situation in Figure \ref{fig:wedge} is quite similar to the previous example in terms of boundary conditions and singularities, except that the bottom surface has been collapsed into a single point. Here, the domain is the isosceles triangle with unit leg and vertex angle $2\alpha = 28.5^\circ$, which corresponds to the root $\lambda = 9.49 + 4.43i$. The fact that the corner is narrower compared to the previous example induces a faster decay rate and higher frequency in the eddies, since both the real and imaginary parts of $\lambda$ have increased. This means that more eddies can be observed without the need of a close-up.
+In terms of boundary conditions and singularities, the situation in Figure \ref{fig:wedge} is quite similar to the one depicted in the previous example, except that the bottom wall has now been collapsed into a single point. Here, the domain is the isosceles triangle with unit leg and vertex angle $2\alpha = 28.5^\circ$, which corresponds to $\lambda = 9.49 + 4.43i$. The fact that the corner is sharper than in the previous example introduces a faster decay rate and a higher frequency in the eddies, since both the real and imaginary parts of $\lambda$ have been increased. As a consequence, four eddies can be observed without the need of a close-up.
 
-This particular setup was chosen for direct comparison with experimental images from  Taneda \cite[Fig.~19]{taneda79} (also featured in \cite[Fig.~10]{vandyke82}) for a very similar setup driven by a rotating cylinder with $\text{Re}=1.7\times10^{-1}$. Only the first two eddies were visible from the experiment. It is extremely difficult to visualize two Moffat eddies, ``the reason is that the relative intensity of successive vortices is the order $10^3$ and therefore the photographic exposure necessary to visualize two successive vorices is about $10^3$ times that necessary to visualize a single vortex.''
+This particular setup was chosen for direct comparison with experimental images from Taneda \cite[Fig.~19]{taneda79}, also featured in \cite[Fig.~10]{vandyke82}, where he used a very similar setup driven by a rotating cylinder with Reynolds number $1.7\times10^{-1}$. His imagining technique employed glycerin as the working fluid with suspended aluminum particles and a photographic exposure time of 90 minutes. Only the first two eddies were visible from the experiment, as it is extremely difficult to visualize two Moffat eddies. According to Taneda, ``the reason is that the relative intensity of successive vortices is the order $10^3$ and therefore the photographic exposure necessary to visualize two successive vortices is about $10^3$ times that necessary to visualize a single vortex.''
 
-This time we can observe 4 eddies in Figure \ref{fig:wedge_loglog}. At $r=\cos(\alpha)$ we have imposed $\psi=0$, but this time the mismatch is not as noticeable as in the previous example.
 \begin{figure}[H]
 	\centering
 	\begin{tikzpicture}
@@ -57,13 +56,13 @@ This time we can observe 4 eddies in Figure \ref{fig:wedge_loglog}. At $r=\cos(\
 		\includegraphics[width=0.4\linewidth]{Figures/wedge_conv}
 	};
 	\end{tikzpicture}    
-	\caption{Stokes flow inside an isosceles triangle of vertex angle $28.5^\circ$.}
+	\caption{Stokes flow inside an isosceles triangle of vertex angle $2\alpha=28.5^\circ$.}
 	\label{fig:wedge}
 \end{figure} 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.9\linewidth]{Figures/wedge_loglog}
-	\caption{Log-log plot along the vertical line for Example \ref{ex:triangle}.}
+	\caption{Stream function log-log plot along the vertical line for Example \ref{ex:triangle}. The length scale $L=\cos{\alpha}$ corresponds to the height of the triangle. The computed solution matches the asymptotic approximation to plotting accuracy over an amplitude range of ten orders of magnitude.}
 	\label{fig:wedge_loglog}
 \end{figure}
 \end{example}
@@ -71,7 +70,11 @@ This time we can observe 4 eddies in Figure \ref{fig:wedge_loglog}. At $r=\cos(\
 
 \begin{example}[Flow over a step.]
 \label{ex:step}
-In Figure \ref{fig:step} we have the L-shaped domain $\Omega = [-1,0] \times [0,1] \cup [0,5]\times[-1,1]$ that resembles a pipe with a sudden expansion or a step. Fully-developed parabolic profiles are imposed on the inflow and outflow such that mass is conserved, i.e. $(u,v)=(1-(2y-1)^2,0)$ at $x=-1$, $(u,v)=((1-y^2)/2,0)$ at $x=5$, and for the remaining surfaces we impose a no-slip BC with $\psi_0=2/3$ at $y=1$ and $\psi_0=0$ on the other surfaces. We observe more poles clustered near the re-entrant corner $(0,0)$, where the pressure becomes unbounded, and the formation of Moffatt eddies at $(0,-1)$. In order to make this example work, it was crucial to introduce a fake corner at $(0,1)$.
+In Figure \ref{fig:step} we have the L-shaped domain $\Omega = [-1,0] \times [0,1] \cup [0,5]\times[-1,1]$ that resembles a finite section of a pipe with a sudden expansion or a step. Fully-developed parabolic profiles are imposed at the inflow and outflow such that mass flow is conserved, i.e. $(u,v)=(1-(2y-1)^2,0)$ at $x=-1$, $(u,v)=((1-y^2)/2,0)$ at $x=5$, and for the remaining surfaces we impose a no-slip BC with $\psi_0=2/3$ at $y=1$ and $\psi_0=0$ on the other walls. We observe more poles clustered near the re-entrant corner $(0,0)$, where the pressure becomes unbounded. 
+
+This time the main flow is not an eddy, since we have imposed inflow and outflow BCs. The corner at $(0,-1)$, on which the Moffatt eddies appear, forms a $90^\circ$ angle as in Example \ref{ex:square}. And once again we are able to resolve two additional eddies, only that this time the zero contour on the second eddy can be plotted.
+
+In order to make this example run with lightning speed, it was crucial to introduce a fake vertex at $(0,1)$. Otherwise, as in the Laplace problem, we observed that the use of Arnoldi plays a crucial role for convergence.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{Figures/step}
@@ -80,7 +83,7 @@ In Figure \ref{fig:step} we have the L-shaped domain $\Omega = [-1,0] \times [0,
 	\includegraphics[width=\linewidth]{Figures/step_eddy}
 	
 	\vspace{2em}
-	\includegraphics[width=0.5\linewidth]{Figures/step_conv}
+	\includegraphics[width=0.4\linewidth]{Figures/step_conv}
 
 	\caption{Stokes flow over a step.}
 	\label{fig:step}

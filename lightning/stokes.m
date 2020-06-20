@@ -138,14 +138,16 @@ for stepno = 1:maxstepno
    % Solve the Stokes problem
    n = 4*stepno;                                    % degree of polynomial term
    Np = length(pol);
-   [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi);
+   [wt,Kj] = build_wt(w,Z,scl,rel);
+   [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,wt);
    [M,N] = size(A);                                  % no. of cols = 2n+1+2Np
    
    Gn = G; Gn(II) = -1i*imag(Gn(II));  % set Neumann vals to 0
-   Gn = [real(Gn); -imag(Gn)];
+   Gn = [real(Gn); -imag(Gn); zeros(M-2*length(Gn),1)];
    
-   [wt,Kj] = build_wt(w,Z,scl,rel);
-   wtt = [wt;wt];
+   
+   wtt = ones(M,1);
+   wtt(1:2*length(wt)) = [wt;wt];
    
    W = spdiags(sqrt(wtt),0,M,M);      % weighting for case 'rel'
    WA = W*A;
@@ -269,7 +271,7 @@ if plots
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),20);
    contour(sx,sy,uu,levels,LW,.7), colorbar, axis equal, hold on
    plot(ww,'-k',LW,1), plot(pol,'.r',MS,6)
-   set(gca,FS,fs-1); axis(ax); %plot(real(wc),imag(wc),'.k',MS,6);
+   set(gca,FS,fs-1); axis(ax) %plot(real(wc),imag(wc),'.k',MS,6);
    title(['dim(A) = ' int2str(M) ' x ' int2str(N) ' ', ...
        ' #poles = ' int2str(length(pol))],FS,fs,FW,NO), hold off
 end
@@ -308,7 +310,7 @@ for k = 1:6, plot(dots(k),'.r','markersize',13-2*k), end
 hold off, axis off
 end
 
-function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi)
+function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,wt)
     H = zeros(n+1,n);                                % Arnoldi Hessenberg matrix
     if arnoldi == 1               
         [H, P0, P1] = arnoldi_fit(Z-wc,n); 
@@ -323,15 +325,18 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi)
     F1 = [ZZ*R1-R0, R1];
     F2 = [ZZ*R1+R0, R1];
     A = [real(F1) -imag(F1); imag(F2) real(F2)];
-
     % no-slip boundary condition
     if any(II)
-        ni = sum(II);
+        ni = nnz(II);
         ZZ = spdiags(conj(Z(II)-wc),0,ni,ni);
         TT = spdiags(1i*T(II),0,ni,ni);
-        F1 = [TT*ZZ*R1(II,:)+conj(TT)*R0(II,:), TT*R1(II,:)];
+        F1 = [(TT*ZZ)*R1(II,:)+conj(TT)*R0(II,:), TT*R1(II,:)];
         F2 = [ZZ*R0(II,:), R0(II,:)];
         A([II,II],:) = [imag(F1) real(F1); imag(F2) real(F2)];
+    else
+        F2 = [ZZ*R0, R0];
+        c = sum(F2,1);
+        A = [A; imag(c) real(c)];
     end
 end
 

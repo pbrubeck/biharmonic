@@ -102,7 +102,6 @@ corners = find(~isnan(outward))';
 kside = zeros(nw, 2);
 kside(:,1) = mod((1:nw)' + 2*(dw==0)-1, nw)+1;
 kside(:,2) = mod((1:nw)'-2-2*(dw([end,1:end-1])==0), nw)+1;
-
 if(mobflag) % move wc outside omega
     j = find(sig<0,1); L = dw(j);
     tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
@@ -148,7 +147,6 @@ for stepno = 1:maxstepno
       end
       pol = [pol polk]; d = [d dk];
       dvec = [(1/3)*dk (2/3)*dk dk];                % finer pts for bndry sampling
-      
       j = kside(k,1);
       tt{j} = [tt{j} dvec(dvec<dw(j))];             % add clustered pts near corner
       if(j==k)
@@ -182,12 +180,11 @@ for stepno = 1:maxstepno
    WA = W*A;
    PC = spdiags(1./sqrt(sum(WA.^2,1)'),0,N,N);       % column scaling
    c = PC*((WA*PC)\(W*Gn));                          % least-squares solution
-   %c = (W*A)\(W*Gn);                                
-   
+
    cc = [c(1); c(2:n+1)-1i*c(n+2:2*n+1)              % complex coeffs for f
          c(2*n+2:2*n+Np+1)-1i*c(2*n+Np+2:end)];
    f = @(z) reshape(fzeval(z(:),wc,...               % vector and matrix inputs
-              cc,H,pol,d,arnoldi,mobflag,scl,n),size(z));    % to u and f both allowed
+              cc,H,pol,d,arnoldi,mobflag,scl,n),size(z)); % to u and f both allowed
    u = @(z) real(f(z));
    for k = 1:nw
       Kk = find(Kj==k);
@@ -312,18 +309,19 @@ end
 
 end   % end of main program
 
-function lightninglogo     % plot the lightning Laplace logo
-    s = linspace(0,1,40)';
-    v = exp(-.35i)*[0 1+2i .5+1.85i 1+3i 0+2.7i -.2+1.3i .1+1.4i];
-    w = v(7) + (v(1)-v(7))*s;
-    for k = 1:6; w = [w; v(k)+(v(k+1)-v(k))*s]; end
-    w = w + .05*imag(w).^2;
-    fill(real(w),imag(w),[1 1 .5]), axis equal, hold on
-    plot(w,'-k','linewidth',.7)
-    dots = .85*(v(3)+.01)*.72.^(0:5);
-    dots = dots + .05*imag(dots).^2;
-    for k = 1:6, plot(dots(k),'.r','markersize',13-2*k), end
-    hold off, axis off
+function fZ = fzeval(Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
+    ZW = Z-wc; 
+    if(mobflag), ZW = 1./ZW; end
+    if arnoldi
+       Q = arnoldi_eval(ZW,H);
+    else
+       Q = (ZW/scl).^(0:n);
+    end
+    if ~isempty(pol)
+       fZ = [Q d./(Z-pol)]*cc;
+    else
+       fZ = Q*cc; 
+    end
 end
 
 function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
@@ -344,15 +342,15 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
     if ~isempty(pol)                                  
         B = d./(Z-pol);
         if any(II)                                     
-            B(II,:) = (B(II,:)./(Z(II)-pol)).*(1i*T(II));
+            B(II,:) = (-B(II,:)./(Z(II)-pol)).*(-1i*T(II));
         end
         A = [A real(B) imag(B)];
     end
 end
 
-function [wt,Kj] = build_wt(w,Z,scl,rel)
+function [wt,Kj] = build_wt(w,Z,scl,rel)        % weights to measure error
     [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
-    if rel                             % weights to measure error
+    if rel                             
         wt = abs(Z-w(Kj))/scl;
         wt = min(wt, 1./wt);
     else
@@ -360,7 +358,7 @@ function [wt,Kj] = build_wt(w,Z,scl,rel)
     end
 end
 
-function [H,P,D] = arnoldi_fit(z,n)   % polyfit with Arnoldi
+function [H,P,D] = arnoldi_fit(z,n) % polyfit with Arnoldi
     M = length(z); 
     H = zeros(n+1,n); 
     P = ones(M,n+1); 
@@ -372,20 +370,20 @@ function [H,P,D] = arnoldi_fit(z,n)   % polyfit with Arnoldi
             p = p - H(j,k)*P(:,j);
         end 
         for j = 1:k     % Gram-Schmidt twice
-            DelH = P(:,j)'*p/M;
+            DelH = P(:,j)'*p;
             p = p - DelH*P(:,j);
             H(j,k) = H(j,k)+DelH;
         end
         H(k+1,k) = norm(p);
-        P(:,k+1) = p/H(k+1,k);
+        P(:,k+1) = p*(1/H(k+1,k));
 
         d=z(:).*D(:,k)+P(:,k);
         d=d-D(:,1:k)*H(1:k,k);
-        D(:,k+1)=d/H(k+1,k);
+        D(:,k+1)=d*(1/H(k+1,k));
     end
 end
 
-function [P,D] = arnoldi_eval(z,H)
+function [P,D] = arnoldi_eval(z,H)  % polyval with Arnoldi
     M=numel(z); n=size(H,2); 
     P=ones(M,n+1);
     D=zeros(M,n+1);
@@ -400,19 +398,18 @@ function [P,D] = arnoldi_eval(z,H)
     end
 end
 
-function fZ = fzeval(Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
-    ZW = Z-wc; 
-    if(mobflag), ZW = 1./ZW; end
-    if arnoldi
-       Q = arnoldi_eval(ZW,H);
-    else
-       Q = (ZW/scl).^(0:n);
-    end
-    if ~isempty(pol)
-       fZ = [Q d./(Z-pol)]*cc;
-    else
-       fZ = Q*cc; 
-    end
+function lightninglogo     % plot the lightning Laplace logo
+    s = linspace(0,1,40)';
+    v = exp(-.35i)*[0 1+2i .5+1.85i 1+3i 0+2.7i -.2+1.3i .1+1.4i];
+    w = v(7) + (v(1)-v(7))*s;
+    for k = 1:6; w = [w; v(k)+(v(k+1)-v(k))*s]; end
+    w = w + .05*imag(w).^2;
+    fill(real(w),imag(w),[1 1 .5]), axis equal, hold on
+    plot(w,'-k','linewidth',.7)
+    dots = .85*(v(3)+.01)*.72.^(0:5);
+    dots = dots + .05*imag(dots).^2;
+    for k = 1:6, plot(dots(k),'.r','markersize',13-2*k), end
+    hold off, axis off
 end
 
 function [g, w, ww, pt, dw, tol, steps, plots, slow, ...

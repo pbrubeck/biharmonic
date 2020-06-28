@@ -69,7 +69,7 @@ scl = max([diff(wr),diff(wi)]);
 q = .5; if slow == 1, q = 0; end                 % sets which corners get more poles
 inpolygonc = @(z,w) inpolygon(real(z), ...
             imag(z),real(w),imag(w));            % complex variant of "inpolygon"
-
+        
 sig = zeros(nw,1);
 outward = zeros(nw,1);
 for k = 1:nw
@@ -96,12 +96,17 @@ for k = 1:nw
 end
 warn = warning('off','MATLAB:rankDeficientMatrix');  % matrices are ill-conditioned
 
-%mobflag = 0;
+% Connectivity graph in case of infinite vertices
 sides = find(dw>0)';
 corners = find(~isnan(outward))';
+kside = zeros(nw, 2);
+kside(:,1) = mod((1:nw)' + 2*(dw==0)-1, nw)+1;
+kside(:,2) = mod((1:nw)'-2-2*(dw([end,1:end-1])==0), nw)+1;
+
 if(mobflag) % move wc outside omega
-    k = find(sig<0,1);
-    wc = 1i*scl;
+    j = find(sig<0,1); L = dw(j);
+    tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
+    wc = wc - max(2,scl)*real(conj(tmp)*(wc-pt{j}(.5*L)))*tmp ;
 end
 
 %% Set up for plots
@@ -134,25 +139,23 @@ for stepno = 1:maxstepno
    for k = corners
       nk = nkv(k);                                  % no. of poles at this corner
       dk = sqrt(1:nk) - sqrt(nk);
-      dk = scl*exp(abs(sig(k))*dk);                      % stronger clustering near corner
-      dk = dk(dk>1e-12*scl);                        % remove poles too close to corner
-      polk = w(k) + outward(k)*dk.^sign(sig(k));                  % poles near this corner
+      dk = scl*exp(abs(sig(k))*dk);                 % stronger clustering near corner
+      dk = dk(dk>1e-15*scl);                        % remove poles too close to corner
+      polk = w(k) + outward(k)*dk.^sign(sig(k));    % poles near this corner
       ii = find(inpolygonc(polk(dk>1e-12*scl),ww),1); % work around inaccuracy
       if ~isempty(ii)                               % don't allow poles in Omega
           dk = dk(1:ii-2); polk = polk(1:ii-2);
       end
-      ntt = max(32,nk);
-      
-      if(sig(k)<0), ntt=max(128,nk); end
-      j = find(corners==k,1);
-      j = corners(mod(j-2,length(corners))+1);
-      if(sig(j)<0), ntt=max(128,nk); end
-      
       pol = [pol polk]; d = [d dk];
       dvec = [(1/3)*dk (2/3)*dk dk];                % finer pts for bndry sampling
-      tt{k} = [tt{k} dvec(dvec<dw(k)) ...           % add clustered pts near corner
-      (dw(k)/(ntt+1))*(1:ntt)];            % additional pts along side
       
+      j = kside(k,1);
+      tt{j} = [tt{j} dvec(dvec<dw(j))];             % add clustered pts near corner
+      if(j==k)
+        ntt = max(30, max(nkv));
+        tt{j} = [tt{j} (dw(j)/(ntt+1))*(1:ntt)];    % additional pts along side
+      end
+      j = kside(k,2);
       tt{j} = [tt{j} dw(j)-dvec(dvec<dw(j))];       % likewise in other direction
    end
    for k = sides
@@ -167,22 +170,19 @@ for stepno = 1:maxstepno
    T = T./abs(T);                                   % normalize tangent vectors
    II = isnan(G);                                   % Neumann indices
    Gn = G; Gn(II) = 0;                              % set Neumann vals to 0
-   
-   plot(real(Z),imag(Z),'.k',real(wc),imag(wc),'xb',real(pol),imag(pol),'.r');
+
    % Solve the Laplace problem
    n = 4*stepno;                                    % degree of polynomial term
-   %n = 1;
-   
    Np = length(pol);
    [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag);
-   [wt,Kj] = build_wt(w,Z,scl,rel);
+   [M,N] = size(A);
    
-   [M,N] = size(A);                                  % no. of cols = 2n+1+2Np
-   W = spdiags(sqrt(wt),0,M,M);                      % weighting for case 'rel'
+   [wt,Kj] = build_wt(w,Z,scl,rel);                  % weighting for case 'rel'
+   W = spdiags(sqrt(wt),0,M,M);                      
    WA = W*A;
-   PC = spdiags(1./sqrt(sum(WA.^2,1)'),0,N,N);        % column scaling
-   c = PC*((WA*PC)\(W*Gn));
-   %c = (W*A)\(W*Gn);                                % least-squares solution
+   PC = spdiags(1./sqrt(sum(WA.^2,1)'),0,N,N);       % column scaling
+   c = PC*((WA*PC)\(W*Gn));                          % least-squares solution
+   %c = (W*A)\(W*Gn);                                
    
    cc = [c(1); c(2:n+1)-1i*c(n+2:2*n+1)              % complex coeffs for f
          c(2*n+2:2*n+Np+1)-1i*c(2*n+Np+2:end)];
@@ -194,7 +194,6 @@ for stepno = 1:maxstepno
       errk(k) = norm(wt(Kk).*(A(Kk,:)*c-Gn(Kk)),inf); % error near corner k
    end
    err = norm(wt.*(A*c-Gn),inf);                     % global error
-
    polmax = 100;
    for k = corners
       if (errk(k) > q*err) && (nkv(k) < polmax)
@@ -238,7 +237,7 @@ tsolve = toc;  % =========== end of main loop ==================================
 % Compress with AAA approximation (requires Chebfun aaa in the path)
 if aaaflag
    [faaa,polaaa] = aaa(f(Z),Z,'mmax',N/2,'tol',0.1*tol,'lawson',0,'cleanup',0);
-   if length(find(inpolygonc(polaaa,ww))) == 0    % AAA successful
+   if length(find(inpolygonc(polaaa,ww))) == 0  % AAA successful
       f = faaa; pol = polaaa;
       u = @(z) real(f(z));
    else                                           % AAA unsuccess.: pole in region
@@ -286,7 +285,6 @@ if plots
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(G),max(G),20);
    contour(sx,sy,uu,levels,LW,.7), colorbar, axis equal, hold on
    plot(ww,'-k',LW,1), plot(pol,'.r',MS,6)
-   plot(Z,'.k',MS,20);
    set(gca,FS,fs-1), axis(ax); plot(real(wc),imag(wc),'.k',MS,6);
    title(['dim(A) = ' int2str(M) ' x ' int2str(N) ' ', ...
        ' #poles = ' int2str(length(pol))],FS,fs,FW,NO), hold off
@@ -311,6 +309,7 @@ if plots
    axes(PO,[.82 .14 .12 .12]), lightninglogo
 end
 
+
 end   % end of main program
 
 function lightninglogo     % plot the lightning Laplace logo
@@ -328,20 +327,20 @@ function lightninglogo     % plot the lightning Laplace logo
 end
 
 function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
-    H = zeros(n+1,n);                                % Arnoldi Hessenberg matrix
+    H = zeros(n+1,n);                           % Arnoldi Hessenberg matrix
     ZW = Z-wc;
     if(mobflag), ZW = 1./ZW; end
-    if arnoldi == 1               
+    if arnoldi == 1  
         [H, Q, DQ] = arnoldi_fit(ZW,n); 
-    else                                             % no-Arnoldi option
-        Q = (ZW/scl).^(0:n);                     % (for educational purposes)
+    else                                        % no-Arnoldi option
+        Q = (ZW/scl).^(0:n);                    % (for educational purposes)
         DQ = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
     end
     if(mobflag), DQ = DQ.*(-ZW.^2); end
-    if any(II)                                       % Neumann BCs, if any
+    if any(II)                                  % Neumann BCs, if any
         Q(II,:) = DQ(II,:).*(-1i*T(II));
     end
-    A = [real(Q) imag(Q(:,2:n+1))];                  % matrix for least-sq
+    A = [real(Q) imag(Q(:,2:n+1))];             % matrix for least-sq
     if ~isempty(pol)                                  
         B = d./(Z-pol);
         if any(II)                                     
@@ -352,15 +351,10 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
 end
 
 function [wt,Kj] = build_wt(w,Z,scl,rel)
-    M = size(Z,1);
-    Kj = zeros(M,1);
-    for j = 1:M
-        dd = abs(Z(j)-w);
-        Kj(j) = find(dd==min(dd),1);   % nearest corner to Zj
-    end
+    [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
     if rel                             % weights to measure error
         wt = abs(Z-w(Kj))/scl;
-        wt = min(wt,1./(wt));
+        wt = min(wt, 1./wt);
     else
         wt = ones(M,1);
     end
@@ -427,7 +421,6 @@ function [g, w, ww, pt, dw, tol, steps, plots, slow, ...
 %% Defaults
 tol = 1e-6; steps = 0; plots = 1;
 slow = 0; rel = 0; aaaflag = 0; arnoldi = 1;
-mobflag = 0; % flag to indicate mobius transformation of polynomial part
 
 %% First treat the domain, defined by P
 
@@ -466,14 +459,15 @@ for k = 1:nw
 end
 
 w = w(:);
-pt = cell(nw,1);
-dw = zeros(nw,1);
-ww = [];          % bndry pts for plotting
 
 ptype = isinf(w);
 ptype = 2*ptype([2:end,1])+ptype([end,1:end-1]);
 mobflag = any(ptype);
 
+nw = length(w);
+pt = cell(nw,1);
+dw = zeros(nw,1);
+ww = [];          % bndry pts for plotting
 for k = 1:nw
    kn = mod(k,nw)+1;   % index of next corner
    if(~isinf(w(k))), ww = [ww; w(k)]; end
@@ -511,7 +505,7 @@ for k = 1:nw
    end
    end
 end
-ww = [ww; w(1)]; 
+ww = [ww; ww(1)]; 
 Zplot = ww;
 
 %% Next treat the boundary conditions

@@ -46,19 +46,22 @@ function [u, maxerr, f, Z, Zplot, A] = lap(P, varargin)
 %
 % Examples:
 %
-%   laplace([0 1 1+1i 1i],[0 0 0 1]);       % square with piecewise const bc
-%   laplace('iso',1:8);                     % isospectral octagon
-%   laplace('iso',[0 nan 1 1 1 nan 0 0]);   % same but with some Neumann BCs
-%   laplace(8,@(z) exp(real(z)));           % random octagon with BC exp(x)
-%   laplace(-8,@(z) exp(real(z)));          % same but circular arc boundaries
-%   laplace({[1 .5] 1+1i -1+1i -1});        % bullet
-%   laplace('circleL',[0 1 0 0 0]);         % circular L-shape
-%   [u,maxerr] = laplace('L','tol',1e-10);  % see NA Digest, Nov. 2018
-%       u(.99+.99i), maxerr                 %    exact soln. 1.0267919261073...
+%   lap([0 1 1+1i 1i],[0 0 0 1]);       % square with piecewise const bc
+%   lap('iso',1:8);                     % isospectral octagon
+%   lap('iso',[0 nan 1 1 1 nan 0 0]);   % same but with some Neumann BCs
+%   lap(8,@(z) exp(real(z)));           % random octagon with BC exp(x)
+%   lap(-8,@(z) exp(real(z)));          % same but circular arc boundaries
+%   lap({[1 .5] 1+1i -1+1i -1});        % bullet
+%   lap('circleL',[0 1 0 0 0]);         % circular L-shape
+%   [u,maxerr] = lap('L','tol',1e-10);  % see NA Digest, Nov. 2018
+%       u(.99+.99i), maxerr                 %    exact soln. 1.0267919261073... 
+% 
+%   lap('chan',[1,nan,0,0,0,nan]);              % potential flow over a channel
+%   lap('infchan',[1,1,nan,nan,0,0,0,nan,nan]); % potential flow over an infinite channel
 
 %% Set up the problem
 [g, w, ww, pt, dw, tol, steps, plots, ...        % parse inputs
-    slow, rel, arnoldi, aaaflag, mobflag] = ...
+    slow, rel, arnoldi, aaaflag, mobflag, ubkg, fbkg] = ...
     parseinputs(P,varargin{:});
 Zplot = ww;                                        
 nw = length(w);                                  % number of corners
@@ -103,9 +106,9 @@ kside = zeros(nw, 2);
 kside(:,1) = mod((1:nw)' + 2*(dw==0)-1, nw)+1;
 kside(:,2) = mod((1:nw)'-2-2*(dw([end,1:end-1])==0), nw)+1;
 if(mobflag) % move wc outside omega
-    j = find(sig<0,1); L = dw(j);
+    j = find(sig<0 & dw>0,1); L = dw(j);
     tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
-    wc = wc - max(2,scl)*real(conj(tmp)*(wc-pt{j}(.5*L)))*tmp ;
+    wc = wc - max(2,scl/2)*real(conj(tmp)*(wc-pt{j}(.5*L)))*tmp ;
 end
 
 %% Set up for plots
@@ -126,12 +129,12 @@ end
 Nvec = []; errvec = []; tic
 errk = ones(nw,1);                               % max error near each corner
 nkv = zeros(nw,1);                               % no. of poles at each corner
-maxstepno = 30; err0 = Inf;
+maxstepno = 30; err0 = inf;
 for stepno = 1:maxstepno
    % Fix poles and sample pts on bndry.  Side k means side from corner k to k+1.
    Z = [];           % col vector of sample points on boundary
    G = [];           % col vector of boundary values at these points
-   T = [];           % c,'tol',1E-10ol vector of unit tangent vectors at these points
+   T = [];           % col vector of unit tangent vectors at these points
    pol = [];         % row vector of poles of the rational approximation
    d = [];           % row vector of distances from poles to their corners
    tt = cell(nw,1);  % cell array of distances of sample points along each side
@@ -175,7 +178,7 @@ for stepno = 1:maxstepno
    [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag);
    [M,N] = size(A);
    
-   [wt,Kj] = build_wt(w,Z,scl,rel);                  % weighting for case 'rel'
+   [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag);       % weighting for case 'rel'
    W = spdiags(sqrt(wt),0,M,M);                      
    WA = W*A;
    PC = spdiags(1./sqrt(sum(WA.^2,1)'),0,N,N);       % column scaling
@@ -190,6 +193,7 @@ for stepno = 1:maxstepno
       Kk = find(Kj==k);
       errk(k) = norm(wt(Kk).*(A(Kk,:)*c-Gn(Kk)),inf); % error near corner k
    end
+   
    err = norm(wt.*(A*c-Gn),inf);                     % global error
    polmax = 100;
    for k = corners
@@ -251,8 +255,9 @@ for k = sides
    Z2 = [Z2; newpts];
    G2 = [G2; g{k}(newpts)];
 end
-wt2 = build_wt(w,Z2,scl,rel);
-err2 = norm(wt2.*(G2-u(Z2)),inf);
+uu2 = u(Z2);
+wt2 = build_wt(Z2,w,wc,scl,rel,mobflag);
+err2 = norm(wt2.*(G2-uu2),inf);
 maxerr = max(err,err2);                                % estimated max error 
 
 %% Convergence curve plot
@@ -277,11 +282,20 @@ if plots
 end
 
 %% Contour plot of solution
+uz = u(Z);
+u = @(z) u(z)+ubkg(z); f = @(z) f(z)+fbkg(z);   % add background solution   
 if plots
    uu = u(zz); uu(~inpolygonc(zz,ww)) = nan;
-   axes(PO,[.52 .34 .47 .56]), levels = linspace(min(G),max(G),20);
+   axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),20);
    contour(sx,sy,uu,levels,LW,.7), colorbar, axis equal, hold on
    plot(ww,'-k',LW,1), plot(pol,'.r',MS,6)
+   wk = nan(2,2,nw);
+   for k = find(isinf(w))'
+       j = mod(k,nw)+1;   wk(:,1,k) = pt{j}([0.5, 0.25]*dw(j)); 
+       j = mod(k-3,nw)+1; wk(:,2,k) = pt{j}([0.5, 0.75]*dw(j));
+   end
+   wk = reshape(wk,2,[]); pk = wk(2,:)-wk(1,:); pk=pk./abs(pk);
+   quiver(real(wk(1,:)),imag(wk(1,:)),real(pk),imag(pk),'k',LW,1,MS,6);
    set(gca,FS,fs-1), axis(ax); plot(real(wc),imag(wc),'.k',MS,6);
    title(['dim(A) = ' int2str(M) ' x ' int2str(N) ' ', ...
        ' #poles = ' int2str(length(pol))],FS,fs,FW,NO), hold off
@@ -292,9 +306,9 @@ if plots
    wc = mean(wr+1i*wi);
    axes(PO,[.09 .21 .35 .28])
    semilogy([-pi pi],maxerr*[1 1],'--b',LW,1), hold on
-   semilogy(angle(Z2-wc),wt2.*abs(u(Z2)-G2),'.r',MS,4)
+   semilogy(angle(Z2-wc),wt2.*abs(uu2-G2),'.r',MS,4)
    axis([-pi pi .0001*errmin 1]), grid on
-   semilogy(angle(Z-wc),wt.*abs(u(Z)-G),'.k',MS,4), hold off
+   semilogy(angle(Z-wc),wt.*abs(uz-G),'.k',MS,4), hold off
    set(gca,'ytick',10.^(-16:4:0))
    set(gca,'xtick',pi*(-1:1),'xticklabel',{'-\pi','0','\pi'})
    set(gca,FS,fs-1), xlabel('angle on boundary wrt wc',FS,fs)
@@ -348,13 +362,16 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
     end
 end
 
-function [wt,Kj] = build_wt(w,Z,scl,rel)        % weights to measure error
+function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag)       % weights to measure error
     [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
     if rel                             
         wt = abs(Z-w(Kj))/scl;
-        wt = min(wt, 1./wt);
+        if mobflag
+            %wt = min(wt, abs(scl./(Z-wc)-scl./(w(Kj)-wc)));
+            wt = min(wt, 1./wt);
+        end
     else
-        wt = ones(M,1);
+        wt = ones(length(Z),1);
     end
 end
 
@@ -413,7 +430,7 @@ function lightninglogo     % plot the lightning Laplace logo
 end
 
 function [g, w, ww, pt, dw, tol, steps, plots, slow, ...
-          rel, arnoldi, aaaflag, mobflag] = parseinputs(P,varargin)
+          rel, arnoldi, aaaflag, mobflag, ubkg, fbkg] = parseinputs(P,varargin)
 
 %% Defaults
 tol = 1e-6; steps = 0; plots = 1;
@@ -439,6 +456,10 @@ if ~iscell(P)
                                w = P.*(1+.2*(-1).^(1:12)); w = w/1.4;
       elseif strcmp(P,'iso')
          w = [1+2i 1+3i 2i 1i+1 2+1i 2 3+1i 3+2i]-(1.5+1.5i); w = w/1.8;
+      elseif strcmp(P,'chan')
+         w = [1i+3,1i-3,-3,0,-1i,-1i+3];
+      elseif strcmp(P,'infchan')
+         w = [1i+3,1i,1i-3,inf,-3,0,-1i,-1i+3,inf];
       end
    end
    if ~iscell(P), P = num2cell(w); end            % convert to cell array
@@ -454,7 +475,6 @@ nw = length(P);
 for k = 1:nw
     w(k) = P{k}(1);
 end
-
 w = w(:);
 
 ptype = isinf(w);
@@ -467,7 +487,6 @@ dw = zeros(nw,1);
 ww = [];          % bndry pts for plotting
 for k = 1:nw
    kn = mod(k,nw)+1;   % index of next corner
-   if(~isinf(w(k))), ww = [ww; w(k)]; end
    if(isinf(w(k)+w(kn)))
        pt{k} = @(z) inf(size(z));
    else
@@ -483,7 +502,11 @@ for k = 1:nw
           elseif(py==3)
             pt{k} = @(t) (w(k) + w(kn) + (dw(k)./(dw(k)-t)-dw(k)./t)*tmp)/2;
           end
+          wwk = pt{k}(linspace(0,dw(k),3)');
+          wwk = wwk(~isinf(wwk));
+          ww = [ww; wwk];
       elseif length(P{k}) == 1                          %     straight arc
+         ww = [ww; w(k)];
          dw(k) = abs(w(kn)-w(k));                   % distance to next corner
          pt{k} = @(t) w(k) + t*(w(kn)-w(k))/dw(k);  % parametrization of arc
       else                                          %     circular arc
@@ -502,18 +525,16 @@ for k = 1:nw
    end
    end
 end
-ww = [ww; ww(1)]; 
-Zplot = ww;
+ww = ww([1:end,1]);
 
 %% Next treat the boundary conditions
 for k = 1:nw
    g{k} = @(z) real(z).^2;       % default
-end      
+end 
 j = 1;
 while j < nargin
    j = j+1;
    v = varargin{j-1};
-
    if ~ischar(v)                 % This block specifies Dirichlet bndry data g.
       if isa(v,'cell')           % if cell array, nothing to change
          g = v;
@@ -541,6 +562,9 @@ while j < nargin
    end
 end
 
+[ubkg, fbkg, g]=parse_chan(w, g);
+
+
 continuous = 1;         % check for disc. bndry data if 'rel' not specified
 for k = 1:nw
    j = mod(k-2,nw)+1;
@@ -555,5 +579,31 @@ end
   
 end   % end of parseinputs
 
-
-
+function [ubkg,fbkg, g] = parse_chan(w,g)
+    nw = length(w);
+    winf = reshape(find(isinf(w)),1,[]);
+    ni = length(winf);
+    if(ni==0)
+        fbkg = @(z) zeros(size(z));
+    else
+        fbkg = @(z) 0*z;
+        for k = winf
+             kpp= mod(k-3,nw)+1;
+             kp = mod(k-2,nw)+1;
+             kn = mod(k,nw)+1;
+             w1 = w(kp); w2 = w(kn); w0 = (w1+w2)/2;
+             g1 = g{kpp}; g2 = g{kn};
+             sk = w1-w(kpp);
+             w2 = w2 - real(conj(sk)*(w2-w1))/conj(sk);
+             fk = @(z) (((w2-z).*g1(z)+(z-w1).*g2(z))/(w2-w1)).* ...
+                        (1+tanh((z-w0)/sk))/2;
+             fbkg = @(z) fbkg(z) + fk(z);
+        end
+    end
+    ubkg = @(z) real(fbkg(z));
+    if(ni>0)
+        for k = 1:length(g)
+            g{k} = @(z) g{k}(k) - ubkg(z);
+        end
+    end
+end

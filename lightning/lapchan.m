@@ -1,15 +1,10 @@
 %close all;
 
-L = 3;
-w = [1i+L,1i,1i-L,inf,-L,0,-1i,-1i+L,inf];
 
-sfun = @tanh; % sigmoid function
-s1 = 5;  s2 = s1;
+w = [1i+3,1i,1i-3,inf,-3,0,-1i,-1i+3,inf];
+g = [1,1,nan,nan,0,0,0,nan,nan];
 
-f0 = @(z) -1i*(((z+1i)/2).*(1+sfun(z/s1))/2  + z.*(1-sfun(z/s2))/2 );
-gfun=@(z) (imag(z)>0.5) - real(f0(z));
-g=cell(size(w));
-[g{:}] = deal(gfun);
+
 figure(1);
 [u, maxerr, f, ZLS] = lap(w,g,'tol',1E-10,'rel');
 
@@ -22,7 +17,7 @@ y = linspace(-1,1,nplt);
 Z = xx+1i*yy;
 Z(xx<0&yy<0) = nan;
 
-fz = f(Z) + f0(Z);
+fz = f(Z);
 figure(2);
 contour(real(Z),imag(Z),real(fz),linspace(0,1,11),'b'); hold on;
 contour(real(Z),imag(Z),imag(fz),7*H,'r'); 

@@ -59,6 +59,7 @@ function [u, maxerr, f, Z, Zplot, A] = lap(P, varargin)
 %   lap('chan',[1,nan,0,0,0,nan]);              % potential flow over a channel
 %   lap('infchan',[1,1,nan,nan,0,0,0,nan,nan]); % potential flow over an infinite channel
 
+
 %% Set up the problem
 [g, w, ww, pt, dw, tol, steps, plots, ...        % parse inputs
     slow, rel, arnoldi, aaaflag, mobflag, ubkg, fbkg] = ...
@@ -108,7 +109,7 @@ kside(:,2) = mod((1:nw)'-2-2*(dw([end,1:end-1])==0), nw)+1;
 if(mobflag) % move wc outside omega
     j = find(sig<0 & dw>0,1); L = dw(j);
     tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
-    wc = wc - max(2,scl/2)*real(conj(tmp)*(wc-pt{j}(.5*L)))*tmp ;
+    wc = wc - max(2*real(conj(tmp)*(wc-pt{j}(.5*L))),scl/2)*tmp ;
 end
 
 %% Set up for plots
@@ -153,7 +154,7 @@ for stepno = 1:maxstepno
       j = kside(k,1);
       tt{j} = [tt{j} dvec(dvec<dw(j))];             % add clustered pts near corner
       if(j==k)
-        ntt = max(30, max(nkv));
+        ntt = max(60, max(nkv));
         tt{j} = [tt{j} (dw(j)/(ntt+1))*(1:ntt)];    % additional pts along side
       end
       j = kside(k,2);
@@ -193,7 +194,6 @@ for stepno = 1:maxstepno
       Kk = find(Kj==k);
       errk(k) = norm(wt(Kk).*(A(Kk,:)*c-Gn(Kk)),inf); % error near corner k
    end
-   
    err = norm(wt.*(A*c-Gn),inf);                     % global error
    polmax = 100;
    for k = corners
@@ -288,14 +288,15 @@ if plots
    uu = u(zz); uu(~inpolygonc(zz,ww)) = nan;
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),20);
    contour(sx,sy,uu,levels,LW,.7), colorbar, axis equal, hold on
-   plot(ww,'-k',LW,1), plot(pol,'.r',MS,6)
+   plot(ww,'-k',LW,1); plot(pol,'.r',MS,6);
+   %plot(Z,'.k'); 
    wk = nan(2,2,nw);
    for k = find(isinf(w))'
        j = mod(k,nw)+1;   wk(:,1,k) = pt{j}([0.5, 0.25]*dw(j)); 
        j = mod(k-3,nw)+1; wk(:,2,k) = pt{j}([0.5, 0.75]*dw(j));
    end
    wk = reshape(wk,2,[]); pk = wk(2,:)-wk(1,:); pk=pk./abs(pk);
-   quiver(real(wk(1,:)),imag(wk(1,:)),real(pk),imag(pk),'k',LW,1,MS,6);
+   quiver(real(wk(1,:)),imag(wk(1,:)),real(pk),imag(pk),'k',LW,1);
    set(gca,FS,fs-1), axis(ax); plot(real(wc),imag(wc),'.k',MS,6);
    title(['dim(A) = ' int2str(M) ' x ' int2str(N) ' ', ...
        ' #poles = ' int2str(length(pol))],FS,fs,FW,NO), hold off
@@ -319,8 +320,6 @@ end
 if plots
    axes(PO,[.82 .14 .12 .12]), lightninglogo
 end
-
-
 end   % end of main program
 
 function fZ = fzeval(Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
@@ -457,9 +456,9 @@ if ~iscell(P)
       elseif strcmp(P,'iso')
          w = [1+2i 1+3i 2i 1i+1 2+1i 2 3+1i 3+2i]-(1.5+1.5i); w = w/1.8;
       elseif strcmp(P,'chan')
-         w = [1i+3,1i-3,-3,0,-1i,-1i+3];
+         w = [3+1i -3+1i -3 0 -1i 3-1i];
       elseif strcmp(P,'infchan')
-         w = [1i+3,1i,1i-3,inf,-3,0,-1i,-1i+3,inf];
+         w = [3+1i 1i -3+1i inf -3 0 -1i 3-1i inf];
       end
    end
    if ~iscell(P), P = num2cell(w); end            % convert to cell array
@@ -502,7 +501,7 @@ for k = 1:nw
           elseif(py==3)
             pt{k} = @(t) (w(k) + w(kn) + (dw(k)./(dw(k)-t)-dw(k)./t)*tmp)/2;
           end
-          wwk = pt{k}(linspace(0,dw(k),3)');
+          wwk = pt{k}(linspace(0,dw(k),max(3,2*py-1))');
           wwk = wwk(~isinf(wwk));
           ww = [ww; wwk];
       elseif length(P{k}) == 1                          %     straight arc
@@ -564,7 +563,6 @@ end
 
 [ubkg, fbkg, g]=parse_chan(w, g);
 
-
 continuous = 1;         % check for disc. bndry data if 'rel' not specified
 for k = 1:nw
    j = mod(k-2,nw)+1;
@@ -579,7 +577,7 @@ end
   
 end   % end of parseinputs
 
-function [ubkg,fbkg, g] = parse_chan(w,g)
+function [ubkg, fbkg, g] = parse_chan(w,g)
     nw = length(w);
     winf = reshape(find(isinf(w)),1,[]);
     ni = length(winf);
@@ -594,7 +592,7 @@ function [ubkg,fbkg, g] = parse_chan(w,g)
              w1 = w(kp); w2 = w(kn); w0 = (w1+w2)/2;
              g1 = g{kpp}; g2 = g{kn};
              sk = w1-w(kpp);
-             w2 = w2 - real(conj(sk)*(w2-w1))/conj(sk);
+             w2 = w2 - real(conj(sk)*(w2-w1))/conj(sk); 
              fk = @(z) (((w2-z).*g1(z)+(z-w1).*g2(z))/(w2-w1)).* ...
                         (1+tanh((z-w0)/sk))/2;
              fbkg = @(z) fbkg(z) + fk(z);
@@ -603,7 +601,7 @@ function [ubkg,fbkg, g] = parse_chan(w,g)
     ubkg = @(z) real(fbkg(z));
     if(ni>0)
         for k = 1:length(g)
-            g{k} = @(z) g{k}(k) - ubkg(z);
+            g{k} = @(z) g{k}(z) - ubkg(z);
         end
-    end
+    end    
 end

@@ -17,7 +17,7 @@ display(lambda);
 
 beta = imag(lambda);
 t=exp(-beta/pi);
-t = 10^floor(log(t)/log(10));
+%t = 10^floor(log(t)/log(10));
 
 
 ns=32*ne;

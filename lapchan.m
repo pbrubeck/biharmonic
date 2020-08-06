@@ -145,6 +145,9 @@ figure(3); clf;
 subplot(1,2,2); 
 plot(w([1:end,1]),'-k'); hold on;
 plot(real(hol),imag(hol),'ob'); 
+
+% zs = 1./(zs-hol); pol=1./(pol-hol);
+
 plot(zs,'.k',lw,1,ms,10); plot(pol,'.r',lw,1,ms,10); 
 hold off; axis equal; xlim([x1,x2]); 
 

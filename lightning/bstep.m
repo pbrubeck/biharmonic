@@ -76,6 +76,7 @@ figure(1); clf;
 pcolor(real(zz),imag(zz),abs(uu));  hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
+plot([0,5],[-1,-1],'-y','linewidth',1.5)
 %plot(w([1:end,1]),'-k',lw,2);
 colormap(parula(256)); shading interp; axis off; caxis([0,1]); 
 

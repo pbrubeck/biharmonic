@@ -189,7 +189,7 @@ pcolor(real(zz),imag(zz),abs(uu)); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)>=tc),'k',lw,1.5); hold on;
 contour(real(zz),imag(zz),real(psi),cs(abs(cs)<=tc),'y',lw,1.5); hold on;
 %plot(w([1:end,1]),'-k',lw,2);
-colormap(jet(256)); shading interp; axis off; caxis([0,1]); 
+colormap(parula(256)); shading interp; axis off; caxis([0,1]); 
 
 plot(real(pol),imag(pol),'.r',ms,10);
 hold off; grid off; axis equal; 

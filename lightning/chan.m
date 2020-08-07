@@ -22,7 +22,8 @@ for k=winf
     w2 = w2 - real((w2-w1)*conj(sk))/conj(sk); 
     a0 = (w2-w1)/2i;
 
-    s = 1;
+    s = abs(a0/sk);
+    s = 1/2;
     coef = H\[imag(g(kpp)); imag(g(kn)); 0; 0];
     fbkg = @(z) fbkg(z) + imag(goursat_cubic(coef,s,(z-w0)/a0));
     ubkg = @(z) ubkg(z) + (1/a0)*velocity_cubic(coef,s,(z-w0)/a0);

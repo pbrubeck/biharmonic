@@ -64,13 +64,12 @@ q = .5; if slow == 1, q = 0; end                 % sets which corners get more p
 inpolygonc = @(z,w) inpolygon(real(z), ...
             imag(z),real(w),imag(w));            % complex variant of "inpolygon"
         
-sig = zeros(nw,1);
+sig = zeros(nw,1); sig(:)=4;
 outward = zeros(nw,1);
-sides = 1:length(w);
 corners = find(~isinf(w))';
 
+
 for k = corners
-   sig(k) = 4;
    kn = mod(k,nw)+1;
    kp = mod(k-2,nw)+1;
    if(isinf(w(kp)) || isinf(w(kn)))
@@ -78,7 +77,7 @@ for k = corners
        forward = pt{j}(.51*L) - pt{j}(.5*L);            % small step toward next corner                            
        backward = pt{j}(.49*L) - pt{j}(.5*L);           % small step toward last corner
        tmp = 1i*backward*sqrt(-forward/backward);
-       outward(k) = tmp/abs(tmp);
+       outward(k) = scl*tmp/abs(tmp);
        sig(k) = -sig(k);
    else
        forward = pt{k}(.01*dw(k)) - w(k);            % small step toward next corner
@@ -123,29 +122,36 @@ for stepno = 1:maxstepno
    pol = [];         % row vector of poles of the rational approximation
    d = [];           % row vector of distances from poles to their corners
    tt = cell(nw,1);  % cell array of distances of sample points along each side
+   
    for k = 1:nw
-      nk = nkv(k);                                  % no. of poles at this corner
-      dk = sqrt(1:nk) - sqrt(nk);
-      dk = exp(abs(sig(k))*dk);                 % stronger clustering near corner
-      dk = dk(dk>1e-15);                        % remove poles too close to corner
-      if(sig(k)>0)
-        polk = w(k) + scl*outward(k)*dk;    % poles near this corner
+      if(isinf(w(k)))
+        nk = min(nkv(mod(k+[0,-2],nw)+1));
       else
-        polk = w(k) + outward(k)./dk;      
+        nk = nkv(k); % no. of poles at this corner
       end
-      
-      ii = find(inpolygonc(polk(dk>1e-12*scl),ww),1); % work around inaccuracy
-      if ~isempty(ii)                               % don't allow poles in Omega
-          dk = dk(1:ii-2); polk = polk(1:ii-2);
+      dk = sqrt(1:nk) - sqrt(nk);
+      dk = scl*exp(abs(sig(k))*dk);             % stronger clustering near corner
+      dk = dk(dk>1e-15*scl);                    % remove poles too close to corner
+      if(~isinf(w(k)))
+          if(sig(k)>0)
+            polk = w(k) + outward(k)*dk;    % poles near this corner
+          else
+            polk = w(k) + outward(k)./dk;      
+          end
+          ii = find(inpolygonc(polk(dk>1e-12*scl),ww),1); % work around inaccuracy
+          if ~isempty(ii)                               % don't allow poles in Omega
+              dk = dk(1:ii-2); polk = polk(1:ii-2);
+          end
+          pol = [pol polk]; d = [d dk];
       end
-      pol = [pol polk]; d = [d dk];
+
       dvec = [(1/3)*dk (2/3)*dk dk];                % finer pts for bndry sampling
-      j = k;
-      tt{j} = [tt{j} dvec(dvec<dw(j))];             % add clustered pts near corner
+      tt{k} = [tt{k} dvec(dvec<dw(k))];             % add clustered pts near corner
       j = mod(k-2,nw)+1;
       tt{j} = [tt{j} dw(j)-dvec(dvec<dw(j))];       % likewise in other direction
    end
-   for k = sides
+
+   for k = 1:nw
       ntt = max(30, max(nkv));
       tt{k} = [tt{k} (dw(k)/(ntt+1))*(1:ntt)];      % additional pts along side
       tt{k} = sort(tt{k}(:));
@@ -158,7 +164,6 @@ for stepno = 1:maxstepno
    end
    T = T./abs(T);                                   % normalize tangent vectors
    II = isnan(G);                                   % Neumann indices
-   Gn = G; Gn(II) = 0;                                  % Neumann indices
 
    % Solve the Stokes problem
    n = 4*stepno;                                    % degree of polynomial term
@@ -170,27 +175,32 @@ for stepno = 1:maxstepno
    
    Gn = G; Gn(II) = -1i*imag(Gn(II));  % set Neumann vals to 0
    Gn = [real(Gn); -imag(Gn); zeros(M-2*length(Gn),1)];
+   if(~any(II))
+      Gn(end-1)=-(wt'*fbkg(Z))*(1/sum(wt));
+   end
 
    wtt = ones(M,1);
    wtt(1:2*length(wt)) = [wt;wt];
    W = spdiags(sqrt(wtt),0,M,M);      % weighting for case 'rel'
    WA = W*A;
    aa = sqrt(sum(WA.^2,1));  % column scaling
+   %aa = max(abs(WA),[],1);
    ja = find(aa>0);
    PA = spdiags(reshape(1./aa(ja),[],1),0,numel(ja),numel(ja));
    c = zeros(size(A,2),1);
    c(ja) = PA*((WA(:,ja)*PA)\(W*Gn));
-   cc = c(1:end/2)+1i*c(end/2+1:end);
+   cc = c(1:end/2) + 1i*c(end/2+1:end);
    f = @(fld,z) reshape(fzeval(fld,z(:),wc,...       % vector and matrix inputs
               cc,H,pol,d,arnoldi,mobflag,scl,n),size(z));    % to u and f both allowed
    psi= @(z) real(f(0,z));
    u  = @(z) f(1,z);
    for k = 1:nw
-      Kk = find(Kj==k);
-      errk(k) = norm(wt(Kk).*(A(Kk,:)*c-Gn(Kk)),inf); % error near corner k
+      K1 = find(Kj==k);
+      K2 = K1+length(Z);
+      errk(k) = norm(wtt(K1).*((A(K1,:)*c-Gn(K1))+1i*(A(K2,:)*c-Gn(K2))),inf); % error near corner k
    end
-   
    err = norm(errk,inf);                     % global error
+
    polmax = 100;
    for k = corners
       if (errk(k) > q*err) && (nkv(k) < polmax)
@@ -246,7 +256,7 @@ end
 
 %% Finer mesh for a posteriori error check
 Z2 = []; G2 = [];
-for k = sides
+for k = 1:nw
    newtt = mean([tt{k}(1:end-1) tt{k}(2:end)],2);
    newpts = pt{k}(newtt);
    Z2 = [Z2; newpts];
@@ -395,15 +405,16 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
     A = [A; real(p0) -imag(p0)];
 end
 
-function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag)       % weights to measure error
+function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag) % weights to measure error
     [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
-    if rel                            
-        wt = abs(Z-w(Kj));
+    if rel
+        wt = abs(Z-w(Kj))/scl;
         if mobflag
-            %wt = abs(1./(Z-wc)-1./(w(Kj)-wc));
-            wt = min(wt, 1./wt);
+            wm = abs((w(Kj)-wc)./(Z-wc));
+            rt = min(abs(diff(w([1:end,1]))))/scl;
+            ii = wt>rt;
+            wt(ii) = min(rt, rt*wm(ii));
         end
-        wt = wt/scl;
     else
         wt = ones(length(Z),1);
     end
@@ -495,7 +506,7 @@ if ~iscell(P)
       elseif strcmp(P,'step')
          w = [3+1i -3+1i -3 0 -1i 3-1i]; demoflag=2;
       elseif strcmp(P,'infchan')
-         w = [3+1i 1i -3+1i inf -3 0 -1i 3-1i inf];
+         w = [3+1i -3+1i inf -3 0 -1i 3-1i inf]; demoflag=3;
       end
    end
    if ~iscell(P), P = num2cell(w); end            % convert to cell array
@@ -515,7 +526,6 @@ end
 w = w(:);
 mobflag = any(isinf(w));
 wf = w(~isinf(w));
-Lmax = 2*max(abs(wf-wf([2:end,1])));
 
 nw = length(w);
 pt = cell(nw,1);
@@ -531,13 +541,11 @@ for k = 1:nw
       
       if(isinf(w(k)))
         tmp = w(knn)-w(kn);
-        %tmp = Lmax*tmp./abs(tmp);
         dw(k) = abs(tmp);
         pt{k} = @(t) w(kn) - (dw(k)./(t)-1)*tmp;
         
       elseif(isinf(w(kn)))
         tmp = w(k)-w(kp);
-        %tmp = Lmax*tmp./abs(tmp);
         dw(k) = abs(tmp);
         pt{k} = @(t) w(k) + (dw(k)./(dw(k)-t)-1)*tmp;
         
@@ -569,6 +577,8 @@ if(demoflag<=1)
     g{1} = @(z) -1+0*z;
 elseif(demoflag==2)
     g{1} = @(z) 0*z; g{2} = @(z) 1-(2*imag(z)-1).^2; g{end} = @(z) (1-imag(z).^2)/2;
+elseif(demoflag==3)
+    [g{[1,2,end]}] = deal(@(z) nan(size(z))+1i/1.5); 
 end
 
 j = 1;

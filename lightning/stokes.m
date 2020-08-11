@@ -49,6 +49,8 @@ function [u, maxerr, f, Z, Zplot, A, pol] = stokes(P, varargin)
 %   stokes('ldc');                         % lid driven cavity
 %   stokes('step');                        % flow over a step
 %   stokes([0 1 1+1i 1i],[0 1i 0 0]);      % rotated lid driven cavity
+%   stokes('infchan');                     % infinite channel
+%   stokes([3+1i -3+1i inf -3 0 -1i 3-1i inf],[nan+2i/3 nan+2i/3 0 0 0 0 0 nan+2i/3])  % same as above
 
 %% Set up the problem
 [g, w, ww, pt, dw, tol, steps, plots, ...        % parse inputs
@@ -60,6 +62,7 @@ wr = sort(real(ww)); wr = wr([1 end]);
 wi = sort(imag(ww)); wi = wi([1 end]);
 wc = mean(wr+1i*wi);                             % for scale- and transl-invariance
 scl = max([diff(wr),diff(wi)]);
+%scl = sqrt(2)*scl;
 q = .5; if slow == 1, q = 0; end                 % sets which corners get more poles
 inpolygonc = @(z,w) inpolygon(real(z), ...
             imag(z),real(w),imag(w));            % complex variant of "inpolygon"
@@ -67,7 +70,6 @@ inpolygonc = @(z,w) inpolygon(real(z), ...
 sig = zeros(nw,1); sig(:)=4;
 outward = zeros(nw,1);
 corners = find(~isinf(w))';
-
 
 for k = corners
    kn = mod(k,nw)+1;
@@ -93,6 +95,7 @@ if(mobflag) % move wc outside omega
     j = find(sig<0 & dw>0,1); L = dw(j);
     tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
     wc = wc - max(2*real(conj(tmp)*(wc-pt{j}(.5*L))),scl)*tmp ;
+    
 end
 
 %% Set up for plots
@@ -144,7 +147,6 @@ for stepno = 1:maxstepno
           end
           pol = [pol polk]; d = [d dk];
       end
-
       dvec = [(1/3)*dk (2/3)*dk dk];                % finer pts for bndry sampling
       tt{k} = [tt{k} dvec(dvec<dw(k))];             % add clustered pts near corner
       j = mod(k-2,nw)+1;
@@ -293,6 +295,7 @@ uz = u(Z);
 u = @(z) u(z)+ubkg(z); psi = @(z) psi(z)+fbkg(z);   % add background solution
 if plots
    uu = real(psi(zz)); uu(~inpolygonc(zz,ww)) = nan;
+   uu = uu - min(uu(:));
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),21);
    
    umax = max(uu(:)); umin = min(uu(:));
@@ -304,7 +307,7 @@ if plots
    plot(ww,'-k',LW,1), plot(pol,'.r',MS,6)
    set(gca,FS,fs-1); axis(ax); plot(real(wc),imag(wc),'.k',MS,6);
    
-   plot(real(Z),imag(Z),'.k',MS,6);
+   %plot(real(Z),imag(Z),'.k',MS,6);
    title(['dim(A) = ' int2str(M) ' x ' int2str(N) ' ', ...
        ' #poles = ' int2str(length(pol))],FS,fs,FW,NO), hold off
 end

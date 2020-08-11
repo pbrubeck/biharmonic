@@ -28,8 +28,10 @@ L1=1; L2=5;
 H1=1; H2=1;
 
 top = @(z) nan(size(z))+2i/3;
-top = @(z) zeros(size(z));
 bot = @(z) nan(size(z));
+top = @(z) zeros(size(z));
+bot = @(z) zeros(size(z));
+
 inlet = @(z) 1-(2*imag(z)-1).^2;
 outlet = @(z) (1-imag(z).^2)/2;
 
@@ -41,7 +43,8 @@ ubc = {top; inlet; bot; bot; bot; outlet};
 
 figure(1);
 [ufun, maxerr, f, Z, Zplot, A, pol] = stokes(w, ubc,'rel', 'tol', stol);
-ffun = @(z) real(f(0,z));
+f0 = min(real(f(0,Z)));
+ffun = @(z) real(f(0,z))-f0;
 
 cs1=[0,0];
 figure(2); clf;

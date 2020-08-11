@@ -1,4 +1,3 @@
-%\documentclass[12pt,aps,pra,showkeys,nofootinbib,notitlepage,groupedaddress]{revtex4-1}
 \documentclass{article}
 %------------------------------------------------------------------------------
 %\usepackage{embedall}
@@ -286,7 +285,7 @@ v=-\frac{\partial\psi}{\partial x}.
 Then, it is easy to verify that \eqref{eq:incomp} is automatically satisfied.
 Now define the vorticity as
 \begin{equation} \label{eq:poisson}
-\omega := \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y}  = -\nabla^2 \psi.
+\omega := \frac{\partial v}{\partial x}-\frac{\partial u}{\partial y}  = -\nabla^2 \psi.
 \end{equation}
 From \eqref{eq:momen} we have $-\nabla^2 u = -\partial p/\partial x$, and from
 \eqref{eq:vel} and \eqref{eq:poisson} we have $-\nabla^2 u
@@ -393,7 +392,7 @@ conditions in the least-squares sense. We write
 f(z) = \sum_{k=1}^N f_j \phi_j(z), \quad g(z) = \sum_{k=1}^N g_j \phi_j(z),
 \end{equation}
 where $f_j, g_j\in \mathbb{C}$ add up to $4N$ real degrees of freedom, and
-correspond to the expansion coeffi- cients with respect to the basis functions
+correspond to the expansion coefficients with respect to the basis functions
 \begin{equation}
 \left\{\phi_j(z)\right\}_{j=1}^{N} = 
    \bigcup_{k=1}^K\left\{\frac{1}{z-\beta_{kn}}\right\}_{n=1}^{N_k} 
@@ -402,7 +401,7 @@ correspond to the expansion coeffi- cients with respect to the basis functions
 
 For the rational functions, we choose poles $\beta_{kn}$ clustered near the
 corners $w_k$, as described in \cite{gopal19},
-\begin{equation}
+\begin{equation} \label{eq:poles}
 \beta_{kn} = w_k + Le^{i\theta_k} e^{-\sigma (\sqrt{N_k}-\sqrt{n})}, 
    \quad k=1,\ldots,K,\quad n=1,\ldots,N_k,
 \end{equation}
@@ -689,9 +688,50 @@ observed that the use of Arnoldi plays a crucial role for convergence.
 \end{figure} 
 \end{example}
 
+%------------------------------------------------------------------------------
 \section{Unbounded domains \label{sec:unbounded}}
+%------------------------------------------------------------------------------
+
+For the unbounded case we rely on the Mobius transformation $w(z)=1/(z-z_0)$
+for some $z_0 \in \mathbb{C}\setminus\Omega$, which maps straight lines to
+circles of finite radius. By applying the lightning technique on the image of
+$\Omega$ under this transformation, we
+conclude that we must cluster poles towards infinity in the direction
+perpendicular to the channel, and choose sample points along the channel
+boundaries that cluster towards infinity.  This is equivalent to inverting the
+sign of $\sigma$ in \eqref{eq:poles}.  [TODO: add a figure.]
 
 
+We assume that $\Omega$ consists of a set of $N_c$ infinite channels, each
+being defined as the region between two parallel rays.  
+For each infinite channel, we divide the complex
+plane into halves by an arbitrary perpendicular line, passing through
+$c_k\in\Omega$, that defines where the channel incorporates with the central
+part of $\Omega$.  We provide the boundary data through a background stream function
+$\psi_k$ for each channel that, as $z\to \infty$ along the positive direction of the channel, its
+values tend to different constants on each of the channel's boundaries, and in
+addition, its normal derivative tends to zero on both boundaries in the same
+limit. On the other half, we require $\psi_k$ to vanish.  This can be
+accomplished by constructing a cubic function of the form $\conj{z}f(z) + g(z)$
+and, before taking the imaginary part, we multiply it by an analytic
+sigmoid function, i.e.\ one that vanishes on one half of the plane and tends to
+one on the other half. We then add all the contributions from every channel
+\begin{equation}
+   \psi_c:=\sum_{k=1}^{N_c} \psi_k = \sum_{k=1}^{N_c} \imag{ s\left(\frac{z-c_k}{d_k}\right) \sum_{j=0}^3 a_j q_j\left(\frac{z-c_k}{e_k}\right)},
+\end{equation}
+where $e_k,d_k\in\mathbb{C}$ are parallel to the channel and their magnitudes
+serve as scaling parameters, $a_j\in\reals$ are the cubic polynomial coefficients, and the functions $q_j(z)=q_j(z,\conj{z})$ are defined such that
+$\imag{q_j(z)} = y^j$ for $j\in\{0,1,2,3\}$,
+\begin{equation}
+   q_0(z) := i, \quad q_1(z) := z, \quad q_2(z) := \frac{z(z-\conj{z})}{2i}, \quad 
+   q_3(z) := \frac{z^2(3\conj{z}-z)}{4}.
+\end{equation}
+For the sigmoid function we choose e.g.\ $s(z) := (\tanh(z)+1)/2$. 
+
+The BVP \eqref{eq:bih}--\eqref{eq:bcs} is modified by subtracting off $\psi_c$
+from the boundary data.
+
+The example provided in Figure \ref{fig:chan} is the infinite extension of Example \ref{ex:step}.
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{Figures/chan}
@@ -711,9 +751,6 @@ observed that the use of Arnoldi plays a crucial role for convergence.
 	\caption{Stokes flow inside an infinitely long pipe with an expansion.}
 	\label{fig:chan}
 \end{figure} 
-
-\section{Multiply connected domains \label{sec:multiply}}
-
 
 
 %------------------------------------------------------------------------------

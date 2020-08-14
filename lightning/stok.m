@@ -62,7 +62,7 @@ function [u, maxerr, f, Z, Zplot, A, pol] = lap(P, varargin)
 
 %% Set up the problem
 [g, w, ww, pt, dw, tol, steps, plots, ...        % parse inputs
-    slow, rel, arnoldi, aaaflag, mobflag, ubkg, fbkg] = ...
+    slow, rel, arnoldi, aaaflag, mobflag] = ...
     parseinputs(P,varargin{:});
 Zplot = ww;                                        
 nw = length(w);                                  % number of corners
@@ -172,20 +172,24 @@ for stepno = 1:maxstepno
    end
    T = T./abs(T);                                   % normalize tangent vectors
    II = isnan(G);                                   % Neumann indices
-   Gn = G; Gn(II) = 0;                              % set Neumann vals to 0
-   
+
    % Solve the Stokes problem
    n = 4*stepno;                                    % degree of polynomial term
+   
    Np = length(pol);
    [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag);
    [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt);
    [M,N] = size(A);                                  % no. of cols = 2n+1+2Np
    
-   Gn = G; Gn(II) = -1i*imag(Gn(II));  % set Neumann vals to 0
-   Gn = [real(Gn); -imag(Gn); zeros(M-2*length(Gn),1)];
-   if(~any(II))
-      Gn(end-1)=-(wt'*fbkg(Z))*(1/sum(wt));
+   Gn = G; 
+   hdata = imag(Gn(II));
+   if(mobflag)
+       Gn(II) = (real(conj(2i*T(II).*(Z(II)-wc)))-1i).*hdata;
+       Gn = Gn./abs(Z-wc).^2;
+   else
+       Gn(II) = -1i*hdata;  % set Neumann vals to 0
    end
+   Gn = [real(Gn); -imag(Gn); zeros(M-2*length(Gn),1)];
 
    wtt = ones(M,1);
    wtt(1:2*length(wt)) = [wt;wt];
@@ -239,7 +243,7 @@ for stepno = 1:maxstepno
       u0 = u; f0 = f; Z0 = Z; G0 = G; A0 = A; M0 = M;
       N0 = N; err0 = err; pol0 = pol; wt0 = wt;
    end
-   if (N > 1200) || (stepno == maxstepno) || (Np >= polmax*nw)  % failure
+   if (N > 1500) || (stepno == maxstepno) || (Np >= polmax*nw)  % failure
       u = u0; f = f0; Z = Z0; G = G0; A = A0; M = M0;
       N = N0; err = err0; pol = pol0; wt = wt0;
       warning('LAPLACE failure.  Loosen tolerance or add corners?')
@@ -297,7 +301,10 @@ end
 
 %% Contour plot of solution
 uz = u(Z);
-u = @(z) u(z)+ubkg(z); f = @(z) f(z)+fbkg(z);   % add background solution   
+if(mobflag) % Loewner-Moebius transform
+    psi = @(z) psi(z).*(abs(z-wc).^2);
+    %u = @(z) u(z); % TODO
+end
 if plots
    uu = real(psi(zz)); uu(~inpolygonc(zz,ww)) = nan;
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),20);
@@ -338,21 +345,24 @@ end   % end of main program
 
 function [fZ] = fzeval(fld,Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
     ZW = Z-wc; if mobflag, ZW = 1./ZW; end
+    
     if arnoldi
        [Q0, Q1] = arnoldi_eval(ZW,H);
     else
        Q0 = (ZW/scl).^(0:n);
        Q1 = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
     end
-    if mobflag, Q1 = Q1.*(-ZW.^2); end
-    R0 = [Q0  d./(Z-pol)];
-    R1 = [Q1 -d./(Z-pol).^2];
+    
+    pol = pol-wc; if mobflag, pol = 1./pol; end
+    R0 = [Q0  d./(ZW-pol)];
+    R1 = [Q1 -d./(ZW-pol).^2]; 
+
     i1 = 1:size(R0,2);
     i2 = i1(end)+(1:size(R0,2));
     if (fld==0)    % stream function
-        fZ = -1i*(conj(Z-wc).*(R0*cc(i1)) +  R0*cc(i2));
+        fZ = -1i*(conj(ZW).*(R0*cc(i1)) +  R0*cc(i2));
     elseif(fld==1) % velocity u+1i*v
-        fZ = conj(conj(Z-wc).*(R1*cc(i1)) - conj(R0*cc(i1)) + (R1*cc(i2)) );
+        fZ = conj(conj(ZW).*(R1*cc(i1)) - conj(R0*cc(i1)) + (R1*cc(i2)) );
     else % pressure
         fZ = conj(4*R1*cc(i1));
     end
@@ -364,15 +374,16 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
     ZW = Z-wc; if mobflag, ZW = 1./ZW; end
     if arnoldi               
         [H, P0, P1] = arnoldi_fit(ZW,n); 
-    else                                             % no-Arnoldi option
+    else                                          % no-Arnoldi option
         P0 = (ZW/scl).^(0:n);                     % (for educational purposes)
         P1 = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
     end
-    if mobflag, P1 = P1.*(-ZW.^2); end
-    R0 = [P0  d./(Z-pol)];
-    R1 = [P1 -d./(Z-pol).^2];
     
-    ZZ = spdiags(conj(Z-wc),0,numel(Z),numel(Z));
+    pol = pol-wc; if mobflag, pol = 1./pol; end
+    R0 = [P0  d./(ZW-pol)];
+    R1 = [P1 -d./(ZW-pol).^2];
+
+    ZZ = spdiags(conj(ZW),0,numel(Z),numel(Z));
     % slip boundary condition        [u; v]
     F1 = [ZZ*R1-R0, R1];
     F2 = [ZZ*R1+R0, R1];
@@ -380,9 +391,9 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
     % no-slip boundary condition     [u_T; psi]
     if any(II)
         ni = nnz(II);
-        ZZ = spdiags(conj(Z(II)-wc),0,ni,ni);
+        ZZ = spdiags(conj(ZW(II)),0,ni,ni);
         TT = spdiags(1i*T(II),0,ni,ni);
-        F1 = [(TT*ZZ)*R1(II,:)+conj(TT)*R0(II,:), TT*R1(II,:)];
+        F1 = [(TT*ZZ)*R1(II,:) + conj(TT)*R0(II,:), TT*R1(II,:)];
         F2 = [ZZ*R0(II,:), R0(II,:)];
         A([II,II],:) = [imag(F1) real(F1); imag(F2) real(F2)];
     else
@@ -390,16 +401,17 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
         c = (wt'*F2)*(1/sum(wt));
         A = [A; imag(c) real(c)];
     end
-    wp = (wt'*Z)/sum(wt); 
-    zw = wp-wc; if mobflag, zw=1./zw; end
+    
+    zw = (wt'*Z)/sum(wt); 
+    zw = zw-wc; if mobflag, zw=1./zw; end
+
     if arnoldi
         [q0, q1] = arnoldi_eval(zw,H);
     else
         q1 = ((0:n)/scl).*(zw/scl).^[0 0:n-1];
     end
     
-    if mobflag, q1=q1.*(-zw.^2); end
-    p0 = [q1, -d./(wp-pol).^2, zeros(1,size(R0,2))];
+    p0 = [q1, -d./(zw-pol).^2, zeros(1,size(R0,2))];
     A = [A; real(p0) -imag(p0)];
 end
 
@@ -412,7 +424,7 @@ function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag) % weights to measure error
             rt = min(abs(diff(w([1:end,1]))))/scl;
             ii = wt>rt;
             wt(ii) = min(rt, rt*wm(ii));
-            Kj(ii) = find(isinf(w),1);
+            %Kj(ii) = find(isinf(w),1);
         end
     else
         wt = ones(length(Z),1);
@@ -474,7 +486,7 @@ function lightninglogo     % plot the lightning Laplace logo
 end
 
 function [g, w, ww, pt, dw, tol, steps, plots, slow, ...
-          rel, arnoldi, aaaflag, mobflag, ubkg, fbkg] = parseinputs(P,varargin)
+          rel, arnoldi, aaaflag, mobflag] = parseinputs(P,varargin)
 
 %% Defaults
 tol = 1e-6; steps = 0; plots = 1;
@@ -606,8 +618,6 @@ while j < nargin
    end
 end
 
-[ubkg, fbkg, g]=parse_chan(w, g);
-
 continuous = 1;         % check for disc. bndry data if 'rel' not specified
 for k = 1:nw
    j = mod(k-2,nw)+1;
@@ -621,32 +631,3 @@ if ~continuous
 end
   
 end   % end of parseinputs
-
-function [ubkg, fbkg, g] = parse_chan(w,g)
-    nw = length(w);
-    winf = reshape(find(isinf(w)),1,[]);
-    ni = length(winf);
-    if(ni==0)
-        fbkg = @(z) zeros(size(z));
-    else
-        fbkg = @(z) 0*z;
-        for k = winf
-             kpp= mod(k-3,nw)+1;
-             kp = mod(k-2,nw)+1;
-             kn = mod(k,nw)+1;
-             w1 = w(kp); w2 = w(kn); w0 = (w1+w2)/2;
-             g1 = g{kpp}; g2 = g{kn};
-             sk = w1-w(kpp);
-             w2 = w2 - real(conj(sk)*(w2-w1))/conj(sk); 
-             fk = @(z) (((w2-z).*g1(z)+(z-w1).*g2(z))/(w2-w1)).* ...
-                        (1+tanh((z-w0)/sk))/2;
-             fbkg = @(z) fbkg(z) + fk(z);
-        end
-    end
-    ubkg = @(z) real(fbkg(z));
-    if(ni>0)
-        for k = 1:length(g)
-            g{k} = @(z) g{k}(z) - ubkg(z);
-        end
-    end    
-end

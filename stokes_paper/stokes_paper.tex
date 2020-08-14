@@ -693,8 +693,7 @@ observed that the use of Arnoldi plays a crucial role for convergence.
 %------------------------------------------------------------------------------
 
 For the unbounded case we rely on the Mobius transformation $w(z)=1/(z-z_0)$
-for some $z_0 \in \mathbb{C}\setminus\Omega$, which maps straight lines to
-circles of finite radius. By applying the lightning technique on the image of
+for some $z_0 \in \mathbb{C}\setminus\Omega$, which maps $\infty$ to the origin. By applying the lightning technique on the image of
 $\Omega$ under this transformation, we
 conclude that we must cluster poles towards infinity in the direction
 perpendicular to the channel, and choose sample points along the channel
@@ -702,34 +701,22 @@ boundaries that cluster towards infinity.  This is equivalent to inverting the
 sign of $\sigma$ in \eqref{eq:poles}.  [TODO: add a figure.]
 
 
-We assume that $\Omega$ consists of a set of $N_c$ infinite channels, each
-being defined as the region between two parallel rays.  
-For each infinite channel, we divide the complex
-plane into halves by an arbitrary perpendicular line, passing through
-$c_k\in\Omega$, that defines where the channel incorporates with the central
-part of $\Omega$.  We provide the boundary data through a background stream function
-$\psi_k$ for each channel that, as $z\to \infty$ along the positive direction of the channel, its
-values tend to different constants on each of the channel's boundaries, and in
-addition, its normal derivative tends to zero on both boundaries in the same
-limit. On the other half, we require $\psi_k$ to vanish.  This can be
-accomplished by constructing a cubic function of the form $\conj{z}f(z) + g(z)$
-and, before taking the imaginary part, we multiply it by an analytic
-sigmoid function, i.e.\ one that vanishes on one half of the plane and tends to
-one on the other half. We then add all the contributions from every channel
-\begin{equation}
-   \psi_c:=\sum_{k=1}^{N_c} \psi_k = \sum_{k=1}^{N_c} \imag{ s\left(\frac{z-c_k}{d_k}\right) \sum_{j=0}^3 a_j q_j\left(\frac{z-c_k}{e_k}\right)},
-\end{equation}
-where $e_k,d_k\in\mathbb{C}$ are parallel to the channel and their magnitudes
-serve as scaling parameters, $a_j\in\reals$ are the cubic polynomial coefficients, and the functions $q_j(z)=q_j(z,\conj{z})$ are defined such that
-$\imag{q_j(z)} = y^j$ for $j\in\{0,1,2,3\}$,
-\begin{equation}
-   q_0(z) := i, \quad q_1(z) := z, \quad q_2(z) := \frac{z(z-\conj{z})}{2i}, \quad 
-   q_3(z) := \frac{z^2(3\conj{z}-z)}{4}.
-\end{equation}
-For the sigmoid function we choose e.g.\ $s(z) := (\tanh(z)+1)/2$. 
 
-The BVP \eqref{eq:bih}--\eqref{eq:bcs} is modified by subtracting off $\psi_c$
-from the boundary data.
+
+It is well known that the biharmonic equation is not conformally invariant, in contrast with the Laplace equation. Nevertheless, it was proven by Loewner in \cite{loewner53} that Moebius transformations are indeed the only ones that allow invariance.
+\begin{equation}
+\hat{\psi} = C \abs{\frac{dw}{dz}}\psi = \abs{w}^2 \psi.
+\end{equation} 
+Without loss of generality, we set $C=1$ and the 
+\begin{equation}
+\hat{\nabla}^4\hat{\psi} = 0
+\end{equation}
+with corresponding boundary conditions
+$\hat{\psi}=\hat{h}, \hat{a}\cdot \hat{\nabla}\hat{\psi} = \hat{k}$ on $\Gamma_1$ and $\hat{\nabla}\hat{\psi}=\hat{\vec{g}}$ on $\Gamma_2$. Then, it follows that $\hat{\psi} = \imag{\conj{w}\hat{f}(w) + \hat{g}(w)}$ for some analytic functions $\hat{f}, \hat{g}$.
+
+\begin{equation}
+\psi = \abs{z-z_0}^2 \hat{\psi}, \quad u-iv = 2i\frac{\partial \hat{\psi}}{\partial w} + 2i \conj{(z-z_0)} \hat{\psi},
+\end{equation}
 
 The example provided in Figure \ref{fig:chan} is the infinite extension of Example \ref{ex:step}.
 \begin{figure}[H]

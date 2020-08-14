@@ -50,7 +50,7 @@ function [u, maxerr, f, Z, Zplot, A, pol] = stokes(P, varargin)
 %   stokes('step');                        % flow over a step
 %   stokes([0 1 1+1i 1i],[0 1i 0 0]);      % rotated lid driven cavity
 %   stokes('infchan');                     % infinite channel
-%   stokes([3+1i -3+1i inf -3 0 -1i 3-1i inf],[nan+2i/3 nan+2i/3 0 0 0 0 0 nan+2i/3])  % same as above
+%   stokes([3+1i -3+1i inf -3 0 -1i 3-1i inf],[nan+2i/3 nan+2i/3 0 0 0 0 0 nan+2i/3]);  % same as above
 
 %% Set up the problem
 [g, w, ww, pt, dw, tol, steps, plots, ...        % parse inputs
@@ -62,7 +62,6 @@ wr = sort(real(ww)); wr = wr([1 end]);
 wi = sort(imag(ww)); wi = wi([1 end]);
 wc = mean(wr+1i*wi);                             % for scale- and transl-invariance
 scl = max([diff(wr),diff(wi)]);
-%scl = sqrt(2)*scl;
 q = .5; if slow == 1, q = 0; end                 % sets which corners get more poles
 inpolygonc = @(z,w) inpolygon(real(z), ...
             imag(z),real(w),imag(w));            % complex variant of "inpolygon"
@@ -79,7 +78,7 @@ for k = corners
        forward = pt{j}(.51*L) - pt{j}(.5*L);            % small step toward next corner                            
        backward = pt{j}(.49*L) - pt{j}(.5*L);           % small step toward last corner
        tmp = 1i*backward*sqrt(-forward/backward);
-       outward(k) = scl*tmp/abs(tmp);
+       outward(k) = (scl)*tmp/abs(tmp);
        sig(k) = -sig(k);
    else
        forward = pt{k}(.01*dw(k)) - w(k);            % small step toward next corner
@@ -94,8 +93,7 @@ warn = warning('off','MATLAB:rankDeficientMatrix');  % matrices are ill-conditio
 if(mobflag) % move wc outside omega
     j = find(sig<0 & dw>0,1); L = dw(j);
     tmp = pt{j}(.51*L) - pt{j}(.49*L); tmp=1i*tmp/abs(tmp);
-    wc = wc - max(2*real(conj(tmp)*(wc-pt{j}(.5*L))),scl)*tmp ;
-    
+    wc = wc - max(2*real(conj(tmp)*(wc-pt{j}(.5*L))),scl/2)*tmp ;
 end
 
 %% Set up for plots
@@ -125,13 +123,9 @@ for stepno = 1:maxstepno
    pol = [];         % row vector of poles of the rational approximation
    d = [];           % row vector of distances from poles to their corners
    tt = cell(nw,1);  % cell array of distances of sample points along each side
-   
+
    for k = 1:nw
-      if(isinf(w(k)))
-        nk = min(nkv(mod(k+[0,-2],nw)+1));
-      else
-        nk = nkv(k); % no. of poles at this corner
-      end
+      nk = nkv(k); % no. of poles at this corner
       dk = sqrt(1:nk) - sqrt(nk);
       dk = scl*exp(abs(sig(k))*dk);             % stronger clustering near corner
       dk = dk(dk>1e-15*scl);                    % remove poles too close to corner
@@ -148,14 +142,17 @@ for stepno = 1:maxstepno
           pol = [pol polk]; d = [d dk];
       end
       dvec = [(1/3)*dk (2/3)*dk dk];                % finer pts for bndry sampling
-      tt{k} = [tt{k} dvec(dvec<dw(k))];             % add clustered pts near corner
       j = mod(k-2,nw)+1;
+      if(~isinf(w(j)) && ~isinf(w(mod(k,nw)+1)))
+      tt{k} = [tt{k} dvec(dvec<dw(k))];             % add clustered pts near corner
       tt{j} = [tt{j} dw(j)-dvec(dvec<dw(j))];       % likewise in other direction
+      end
    end
 
    for k = 1:nw
       ntt = max(30, max(nkv));
-      tt{k} = [tt{k} (dw(k)/(ntt+1))*(1:ntt)];      % additional pts along side
+
+      tt{k} = [tt{k} (dw(k)/(ntt))*((1:ntt)-1/2)];      % additional pts along side
       tt{k} = sort(tt{k}(:));
       tk = tt{k}; pk = pt{k};                       % abbrevations 
       Z = [Z; pk(tk)];                              % sample pts on side k
@@ -203,8 +200,12 @@ for stepno = 1:maxstepno
    end
    err = norm(errk,inf);                     % global error
 
+   ii = find(isinf(w));
+   ii = unique([mod(ii-2,nw)+1, mod(ii,nw)+1]);
+   %errk(ii) = max(errk(ii));
+   
    polmax = 100;
-   for k = corners
+   for k = 1:nw
       if (errk(k) > q*err) && (nkv(k) < polmax)
           nkv(k) = nkv(k)+ceil(1+sqrt(nkv(k)));      % increase no. poles
       else
@@ -212,6 +213,9 @@ for stepno = 1:maxstepno
          %nkv(k) = min(polmax,nkv(k)+1);
       end  
    end
+   %nkv(ii) = min(nkv(ii));
+   nkv(isinf(w)) = max(nkv(ii));
+   nkv
    
    if steps                                           % plot error on bndry
       subplot(1,2,1), plot(ww,'k',LW,1), grid on
@@ -413,10 +417,11 @@ function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag) % weights to measure error
     if rel
         wt = abs(Z-w(Kj))/scl;
         if mobflag
-            wm = abs((w(Kj)-wc)./(Z-wc));
+            wm = abs((w(Kj)-wc)./(Z-wc));           
             rt = min(abs(diff(w([1:end,1]))))/scl;
             ii = wt>rt;
             wt(ii) = min(rt, rt*wm(ii));
+            Kj(ii) = find(isinf(w),1);
         end
     else
         wt = ones(length(Z),1);
@@ -509,7 +514,7 @@ if ~iscell(P)
       elseif strcmp(P,'step')
          w = [3+1i -3+1i -3 0 -1i 3-1i]; demoflag=2;
       elseif strcmp(P,'infchan')
-         w = [3+1i -3+1i inf -3 0 -1i 3-1i inf]; demoflag=3;
+         w = [3+1i 1i -3+1i inf -3 0 -1i 3-1i inf]; demoflag=3;
       end
    end
    if ~iscell(P), P = num2cell(w); end            % convert to cell array
@@ -581,7 +586,7 @@ if(demoflag<=1)
 elseif(demoflag==2)
     g{1} = @(z) 0*z; g{2} = @(z) 1-(2*imag(z)-1).^2; g{end} = @(z) (1-imag(z).^2)/2;
 elseif(demoflag==3)
-    [g{[1,2,end]}] = deal(@(z) nan(size(z))+1i/1.5); 
+    [g{[1,2,3,end]}] = deal(@(z) nan(size(z))+1i/1.5); 
 end
 
 j = 1;

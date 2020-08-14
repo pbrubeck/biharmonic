@@ -173,29 +173,42 @@ for stepno = 1:maxstepno
    T = T./abs(T);                                   % normalize tangent vectors
    II = isnan(G);                                   % Neumann indices
    Gn = G; Gn(II) = 0;                              % set Neumann vals to 0
-
-   % Solve the Laplace problem
+   
+   % Solve the Stokes problem
    n = 4*stepno;                                    % degree of polynomial term
    Np = length(pol);
-   [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag);
-   [M,N] = size(A);
+   [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag);
+   [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt);
+   [M,N] = size(A);                                  % no. of cols = 2n+1+2Np
    
-   [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag);       % weighting for case 'rel'
-   W = spdiags(sqrt(wt),0,M,M);                      
-   WA = W*A;
-   PC = spdiags(1./sqrt(sum(WA.^2,1)'),0,N,N);       % column scaling
-   c = PC*((WA*PC)\(W*Gn));                          % least-squares solution
-
-   cc = [c(1); c(2:n+1)-1i*c(n+2:2*n+1)              % complex coeffs for f
-         c(2*n+2:2*n+Np+1)-1i*c(2*n+Np+2:end)];
-   f = @(z) reshape(fzeval(z(:),wc,...               % vector and matrix inputs
-              cc,H,pol,d,arnoldi,mobflag,scl,n),size(z)); % to u and f both allowed
-   u = @(z) real(f(z));
-   for k = 1:nw
-      Kk = find(Kj==k);
-      errk(k) = norm(wt(Kk).*(A(Kk,:)*c-Gn(Kk)),inf); % error near corner k
+   Gn = G; Gn(II) = -1i*imag(Gn(II));  % set Neumann vals to 0
+   Gn = [real(Gn); -imag(Gn); zeros(M-2*length(Gn),1)];
+   if(~any(II))
+      Gn(end-1)=-(wt'*fbkg(Z))*(1/sum(wt));
    end
-   err = norm(wt.*(A*c-Gn),inf);                     % global error
+
+   wtt = ones(M,1);
+   wtt(1:2*length(wt)) = [wt;wt];
+   W = spdiags(sqrt(wtt),0,M,M);      % weighting for case 'rel'
+   WA = W*A;
+   aa = sqrt(sum(WA.^2,1));  % column scaling
+   %aa = max(abs(WA),[],1);
+   ja = find(aa>0);
+   PA = spdiags(reshape(1./aa(ja),[],1),0,numel(ja),numel(ja));
+   c = zeros(size(A,2),1);
+   c(ja) = PA*((WA(:,ja)*PA)\(W*Gn));
+   cc = c(1:end/2) + 1i*c(end/2+1:end);
+   f = @(fld,z) reshape(fzeval(fld,z(:),wc,...       % vector and matrix inputs
+              cc,H,pol,d,arnoldi,mobflag,scl,n),size(z));    % to u and f both allowed
+   psi= @(z) real(f(0,z));
+   u  = @(z) f(1,z);
+   for k = 1:nw
+      K1 = find(Kj==k);
+      K2 = K1+length(Z);
+      errk(k) = norm(wtt(K1).*((A(K1,:)*c-Gn(K1))+1i*(A(K2,:)*c-Gn(K2))),inf); % error near corner k
+   end
+   err = norm(errk,inf);                     % global error
+
    polmax = 100;
    for k = corners
       if (errk(k) > q*err) && (nkv(k) < polmax)
@@ -286,7 +299,7 @@ end
 uz = u(Z);
 u = @(z) u(z)+ubkg(z); f = @(z) f(z)+fbkg(z);   % add background solution   
 if plots
-   uu = u(zz); uu(~inpolygonc(zz,ww)) = nan;
+   uu = real(psi(zz)); uu(~inpolygonc(zz,ww)) = nan;
    axes(PO,[.52 .34 .47 .56]), levels = linspace(min(uu(:)),max(uu(:)),20);
    contour(sx,sy,uu,levels,LW,.7), colorbar, axis equal, hold on
    plot(ww,'-k',LW,1); plot(pol,'.r',MS,6);
@@ -323,55 +336,83 @@ if plots
 end
 end   % end of main program
 
-function fZ = fzeval(Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
-    ZW = Z-wc; 
-    if(mobflag), ZW = 1./ZW; end
+function [fZ] = fzeval(fld,Z,wc,cc,H,pol,d,arnoldi,mobflag,scl,n) 
+    ZW = Z-wc; if mobflag, ZW = 1./ZW; end
     if arnoldi
-       Q = arnoldi_eval(ZW,H);
+       [Q0, Q1] = arnoldi_eval(ZW,H);
     else
-       Q = (ZW/scl).^(0:n);
+       Q0 = (ZW/scl).^(0:n);
+       Q1 = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
     end
-    if ~isempty(pol)
-       fZ = [Q d./(Z-pol)]*cc;
-    else
-       fZ = Q*cc; 
+    if mobflag, Q1 = Q1.*(-ZW.^2); end
+    R0 = [Q0  d./(Z-pol)];
+    R1 = [Q1 -d./(Z-pol).^2];
+    i1 = 1:size(R0,2);
+    i2 = i1(end)+(1:size(R0,2));
+    if (fld==0)    % stream function
+        fZ = -1i*(conj(Z-wc).*(R0*cc(i1)) +  R0*cc(i2));
+    elseif(fld==1) % velocity u+1i*v
+        fZ = conj(conj(Z-wc).*(R1*cc(i1)) - conj(R0*cc(i1)) + (R1*cc(i2)) );
+    else % pressure
+        fZ = conj(4*R1*cc(i1));
     end
 end
 
-function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag)
-    H = zeros(n+1,n);                           % Arnoldi Hessenberg matrix
-    ZW = Z-wc;
-    if(mobflag), ZW = 1./ZW; end
-    if arnoldi == 1  
-        [H, Q, DQ] = arnoldi_fit(ZW,n); 
-    else                                        % no-Arnoldi option
-        Q = (ZW/scl).^(0:n);                    % (for educational purposes)
-        DQ = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
+function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
+    H = zeros(n+1,n);    % Arnoldi Hessenberg matrix
+    
+    ZW = Z-wc; if mobflag, ZW = 1./ZW; end
+    if arnoldi               
+        [H, P0, P1] = arnoldi_fit(ZW,n); 
+    else                                             % no-Arnoldi option
+        P0 = (ZW/scl).^(0:n);                     % (for educational purposes)
+        P1 = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
     end
-    if(mobflag), DQ = DQ.*(-ZW.^2); end
-    if any(II)                                  % Neumann BCs, if any
-        Q(II,:) = DQ(II,:).*(-1i*T(II));
+    if mobflag, P1 = P1.*(-ZW.^2); end
+    R0 = [P0  d./(Z-pol)];
+    R1 = [P1 -d./(Z-pol).^2];
+    
+    ZZ = spdiags(conj(Z-wc),0,numel(Z),numel(Z));
+    % slip boundary condition        [u; v]
+    F1 = [ZZ*R1-R0, R1];
+    F2 = [ZZ*R1+R0, R1];
+    A = [real(F1) -imag(F1); imag(F2) real(F2)];
+    % no-slip boundary condition     [u_T; psi]
+    if any(II)
+        ni = nnz(II);
+        ZZ = spdiags(conj(Z(II)-wc),0,ni,ni);
+        TT = spdiags(1i*T(II),0,ni,ni);
+        F1 = [(TT*ZZ)*R1(II,:)+conj(TT)*R0(II,:), TT*R1(II,:)];
+        F2 = [ZZ*R0(II,:), R0(II,:)];
+        A([II,II],:) = [imag(F1) real(F1); imag(F2) real(F2)];
+    else
+        F2 = [ZZ*R0, R0];
+        c = (wt'*F2)*(1/sum(wt));
+        A = [A; imag(c) real(c)];
     end
-    A = [real(Q) imag(Q(:,2:n+1))];             % matrix for least-sq
-    if ~isempty(pol)                                  
-        B = d./(Z-pol);
-        if any(II)                                     
-            B(II,:) = (-B(II,:)./(Z(II)-pol)).*(-1i*T(II));
-        end
-        A = [A real(B) imag(B)];
+    wp = (wt'*Z)/sum(wt); 
+    zw = wp-wc; if mobflag, zw=1./zw; end
+    if arnoldi
+        [q0, q1] = arnoldi_eval(zw,H);
+    else
+        q1 = ((0:n)/scl).*(zw/scl).^[0 0:n-1];
     end
+    
+    if mobflag, q1=q1.*(-zw.^2); end
+    p0 = [q1, -d./(wp-pol).^2, zeros(1,size(R0,2))];
+    A = [A; real(p0) -imag(p0)];
 end
 
-function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag)       % weights to measure error
+function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag) % weights to measure error
     [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
-    if rel                             
+    if rel
         wt = abs(Z-w(Kj))/scl;
         if mobflag
             wm = abs((w(Kj)-wc)./(Z-wc));           
             rt = min(abs(diff(w([1:end,1]))))/scl;
             ii = wt>rt;
             wt(ii) = min(rt, rt*wm(ii));
-            %Kj(ii) = find(isinf(w),1);
+            Kj(ii) = find(isinf(w),1);
         end
     else
         wt = ones(length(Z),1);

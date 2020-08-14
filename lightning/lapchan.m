@@ -3,8 +3,6 @@
 
 w = [1i+3,1i,1i-3,inf,-3,0,-1i,-1i+3,inf];
 g = [1,1,nan,nan,0,0,0,nan,nan];
-
-
 figure(1);
 [u, maxerr, f, ZLS] = lap(w,g,'tol',1E-10,'rel');
 

@@ -215,7 +215,6 @@ for stepno = 1:maxstepno
    end
    %nkv(ii) = min(nkv(ii));
    nkv(isinf(w)) = max(nkv(ii));
-   nkv
    
    if steps                                           % plot error on bndry
       subplot(1,2,1), plot(ww,'k',LW,1), grid on
@@ -372,7 +371,7 @@ function [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag,wt)
     
     ZW = Z-wc; if mobflag, ZW = 1./ZW; end
     if arnoldi               
-        [H, P0, P1] = arnoldi_fit(ZW,n); 
+        [H, P0, P1] = arnoldi_fit(ZW,n,wt); 
     else                                             % no-Arnoldi option
         P0 = (ZW/scl).^(0:n);                     % (for educational purposes)
         P1 = ((0:n)/scl).*(ZW/scl).^[0 0:n-1];
@@ -428,23 +427,24 @@ function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag) % weights to measure error
     end
 end
 
-function [H,P,D] = arnoldi_fit(z,n) % polyfit with Arnoldi
+function [H,P,D] = arnoldi_fit(z,n,wt) % polyfit with Arnoldi
     M = length(z); 
     H = zeros(n+1,n); 
     P = ones(M,n+1); 
     D = zeros(size(P)); 
     for k = 1:n       
         p = z(:).*P(:,k);
+        q = wt(:).*p;
         for j = 1:k
-            H(j,k) = P(:,j)'*p;
+            H(j,k) = P(:,j)'*q;
             p = p - H(j,k)*P(:,j);
         end 
         for j = 1:k     % Gram-Schmidt twice
-            DelH = P(:,j)'*p;
+            DelH = P(:,j)'*q;
             p = p - DelH*P(:,j);
             H(j,k) = H(j,k)+DelH;
         end
-        H(k+1,k) = norm(p);
+        H(k+1,k) = sqrt(p'*q);
         P(:,k+1) = p*(1/H(k+1,k));
 
         d=z(:).*D(:,k)+P(:,k);

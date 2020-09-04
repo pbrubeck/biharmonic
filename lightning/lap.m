@@ -140,6 +140,7 @@ for stepno = 1:maxstepno
    d = [];           % row vector of distances from poles to their corners
    tt = cell(nw,1);  % cell array of distances of sample points along each side
    
+   
    for k = corners
       nk = nkv(k);                                  % no. of poles at this corner
       dk = sqrt(1:nk) - sqrt(nk);
@@ -179,7 +180,7 @@ for stepno = 1:maxstepno
    Np = length(pol);
    [A,H] = build_ls(n,Z,wc,pol,d,scl,T,II,arnoldi,mobflag);
    [M,N] = size(A);
-   
+      
    [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag);       % weighting for case 'rel'
    W = spdiags(sqrt(wt),0,M,M);                      
    WA = W*A;

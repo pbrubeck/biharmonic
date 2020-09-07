@@ -366,13 +366,10 @@ end
 function [wt,Kj] = build_wt(Z,w,wc,scl,rel,mobflag)       % weights to measure error
     [~,Kj]=min(abs(Z-reshape(w,1,[])),[],2);
     if rel                             
-        wt = abs(Z-w(Kj))/scl;
+        wt = min(scl,abs(Z-w(Kj)));
+        wt=wt./max(wt);
         if mobflag
-            wm = abs((w(Kj)-wc)./(Z-wc));           
-            rt = min(abs(diff(w([1:end,1]))))/scl;
-            ii = wt>rt;
-            wt(ii) = min(rt, rt*wm(ii));
-            %Kj(ii) = find(isinf(w),1);
+            wt=wt.*(abs(Z-wc).^-2);
         end
     else
         wt = ones(length(Z),1);
@@ -597,9 +594,13 @@ function [ubkg, fbkg, g] = parse_chan(w,g)
              w1 = w(kp); w2 = w(kn); w0 = (w1+w2)/2;
              g1 = g{kpp}; g2 = g{kn};
              sk = w1-w(kpp);
+             
              w2 = w2 - real(conj(sk)*(w2-w1))/conj(sk); 
-             fk = @(z) (((w2-z).*g1(z)+(z-w1).*g2(z))/(w2-w1)).* ...
-                        (1+tanh((z-w0)/sk))/2;
+             fk = @(z) 0.5*(((w2-z).*g1(z)+(z-w1).*g2(z))/(w2-w1)).* ...
+                 (1+tanh((z-w0)/sk));
+                %(1+((z-w0)/sk)./sqrt(((z-w0)/sk).^2+1));
+                %(1+tanh((z-w0)/sk));
+                %(1+(4/pi)*atan(tanh((pi/4)*(z-w0)/sk)));
              fbkg = @(z) fbkg(z) + fk(z);
         end
     end
